@@ -1,5 +1,5 @@
 from . import db
-from sqlalchemy import Column, String, Integer, ForeignKey
+from sqlalchemy import Column, String, Integer
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.orm import relationship, backref
 
@@ -13,7 +13,6 @@ class ClientModel(db.Model):
     name = Column(String(150), nullable=False)
     password = Column(String(150), nullable=False)
     phone = Column(String(16))
-    address_id = Column(Integer, ForeignKey("address.id"), nullable=False)
 
     addresses = relationship(
         "AddressModel", backref=backref("client", uselist=False)
@@ -36,6 +35,5 @@ class ClientModel(db.Model):
             "id": self.id,
             "email": self.email,
             "phone": self.phone,
-            "address_id": self.address_id,
             "addresses": self.addresses,
         }
