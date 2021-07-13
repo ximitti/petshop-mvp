@@ -7,4 +7,12 @@ def init_app(app):
     db.init_app(app)
     app.db = db
 
-    # TODO import your model here!!!  from app.models import YourModel
+    from app.models import (
+        AddressModel,
+        ClientModel,
+        OrderModel,
+        OrderServicesModel,
+        PetModel,
+        PetshopModel,
+        ServicesModel,
+    )
