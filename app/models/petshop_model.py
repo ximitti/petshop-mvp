@@ -1,5 +1,6 @@
 from . import db
 from sqlalchemy import Column, String, Integer, Boolean
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 class PetshopModel(db.Model):
@@ -11,6 +12,17 @@ class PetshopModel(db.Model):
     email = Column(String(150), nullable=False, unique=True)
     password = Column(String(150), nullable=False)
     id_admin = Column(Boolean(), default=True)
+
+    @property
+    def password(self):
+        raise ArithmeticError("Password is not acessible")
+
+    @password.setter
+    def password(self, password_to_hash):
+        self.password = generate_password_hash(password_to_hash)
+
+    def check_password(self, password_to_compare):
+        return check_password_hash(self.password, password_to_compare)
 
     @property
     def serialize(self):
