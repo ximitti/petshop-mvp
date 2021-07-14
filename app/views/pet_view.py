@@ -1,12 +1,13 @@
 from app.models.pet_model import PetModel
 from flask import Blueprint, jsonify, current_app, request
-# from flask_httpauth import HTTPTokenAuth
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from http import HTTPStatus
 
-bp = Blueprint("bp_pet", __name__, url_prefix="/pets")
+bp = Blueprint("bp_pet", __name__, url_prefix="/api")
 
 
-@bp.post('')
+@bp.post('/pets/')
+@jwt_required()
 def create():
     session = current_app.db.session
     data = request.get_json()
@@ -21,7 +22,8 @@ def create():
     return {"message": "Pet created", "data": pet.serialize}, HTTPStatus.CREATED
 
 
-@bp.get('')
+@bp.get('/pets/')
+@jwt_required()
 def retrieve_all():
     client_id = request.args.get('client_id')
 
@@ -38,7 +40,8 @@ def retrieve_all():
         "data": pets
     }, HTTPStatus.OK
 
-@bp.get('/<int:pet_id>')
+@bp.get('/pets/<int:pet_id>')
+@jwt_required()
 def retrieve_by_id(pet_id: int):
     try:
         pet: PetModel = PetModel.query.get(pet_id)
