@@ -4,9 +4,12 @@ from environs import Env
 
 from app.configs import database, migrations
 from app import views
+from flask_jwt_extended import JWTManager
 
 env = Env()
 env.read_env()
+
+jwt = JWTManager()
 
 
 def create_app():
@@ -15,9 +18,11 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = env("SQLALCHEMY_DATABASE_URI")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["JSON_SORT_KEYS"] = False
+    app.config["SECRET_KEY"] = "super secret key"
 
     database.init_app(app)
     views.init_app(app)
+    jwt.init_app(app)
     migrations.init_app(app)
 
     return app
