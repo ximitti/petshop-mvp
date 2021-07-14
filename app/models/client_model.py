@@ -1,3 +1,4 @@
+from sqlalchemy.sql.expression import delete
 from . import db
 from sqlalchemy import Column, String, Integer
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -11,7 +12,7 @@ class ClientModel(db.Model):
 
     email = Column(String(150), nullable=False, unique=True)
     name = Column(String(150), nullable=False)
-    password = Column(String(150), nullable=False)
+    password_hash = Column(String(150), nullable=False)
     phone = Column(String(16))
 
     addresses = relationship(
@@ -24,10 +25,10 @@ class ClientModel(db.Model):
 
     @password.setter
     def password(self, password_to_hash):
-        self.password = generate_password_hash(password_to_hash)
+        self.password_hash = generate_password_hash(password_to_hash)
 
     def check_password(self, password_to_compare):
-        return check_password_hash(self.password, password_to_compare)
+        return check_password_hash(self.password_hash, password_to_compare)
 
     @property
     def serialize(self):

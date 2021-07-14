@@ -1,7 +1,5 @@
 from . import db
 from sqlalchemy import Column, String, Integer, ForeignKey
-from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy.orm import relationship, backref
 
 
 class AddressModel(db.Model):
@@ -14,7 +12,7 @@ class AddressModel(db.Model):
     street = Column(String(150), nullable=False)
     number = Column(String(5), nullable=False)
     complement = Column(String(150))
-    client_id = Column(Integer, ForeignKey("client.id"), nullable=False)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
 
     @property
     def serialize(self):
