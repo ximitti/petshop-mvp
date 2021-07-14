@@ -35,6 +35,7 @@ class ClientModel(db.Model):
         return {
             "id": self.id,
             "email": self.email,
+            "name": self.name,
             "phone": self.phone,
             "addresses": self.addresses,
         }
