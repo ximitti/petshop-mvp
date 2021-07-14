@@ -1,6 +1,7 @@
-from flask.globals import request
 from app.models.client_model import ClientModel
-from flask import Blueprint, jsonify,current_app, request
+from flask import Blueprint, json, jsonify,current_app, request
+
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 
 bp  = Blueprint("bp", __name__, url_prefix="/clients")
 
@@ -13,6 +14,7 @@ def get_clients():
         clients = [client.serialize for client in clients]
 
         return jsonify(clients)
+
     except:
         ...
 
@@ -32,22 +34,75 @@ def create_client():
         session.commit()
 
         return {"message":"user created"}, 201
+
     except:
         ...
     
     
 
-# @bp("/login")
-# def login():
-#     return "loga um usuario ai python"
+@bp.post("/login")
+def login():
+    data = request.get_json()
+    try:
+        client = ClientModel.query.filter_by(email=data["email"]).first()
 
-# @bp("/logout")
-# def logout():
-#     return "desloga um usuario ai python"
+        if ClientModel.check_password(client, data["password"]):
 
-# @bp("/<int:id>")
-# def get_client_by_id():
-#     return "pega um usuario ai python"
+            access_token = create_access_token(identity=client.id)
+
+            return jsonify(access_token)
+
+        return jsonify({"message": "Bad email or password"}), 401
+
+    except:
+        return jsonify({"message": "Bad email or password"}), 401
+
+@bp.get("/<int:id>")
+@jwt_required()
+def get_client_by_id(id):
+    current_user_id = get_jwt_identity()
+    if current_user_id == id:
+        try:
+            client = ClientModel.query.get(current_user_id)
+
+            return jsonify(client.serialize)
+        except:
+            return {"message": "Not Found"}, 404
+    return {"message": "unauthorized"}
+
+@bp.patch("/<int:id>")
+@jwt_required()
+def update_client_by_id(id):
+    session = current_app.db.session
+    current_user_id = get_jwt_identity()
+    data = request.get_json()
+    if current_user_id == id:
+        try:
+            client = ClientModel.query.get(current_user_id)
+            client.name = data["name"]
+            session.commit()
+            return jsonify(client.serialize)
+        except KeyError:
+            return {"message": "avaiable keys : name"}, 404
+        except:
+            return {"messege":"Not Found"}
+    return {"message": "unauthorized"}
+
+
+@bp.delete("/<int:id>")
+@jwt_required()
+def delete_client_by_id(id):
+    current_user_id = get_jwt_identity()
+    session = current_app.db.session
+    if current_user_id == id:
+        try:
+            client = ClientModel.query.get(current_user_id)
+            session.delete(client)
+            session.commit()
+            return {"message":"deleted"}, 404
+        except:
+            return {"message":"Not Found"}, 404
+    return {"message": "unauthorized"}
 
 # @bp("/<int:id>/address")
 # def get_create_address():
