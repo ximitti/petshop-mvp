@@ -34,7 +34,9 @@ class ClientModel(db.Model):
     def serialize(self):
         return {
             "id": self.id,
+            "name":self.name,
             "email": self.email,
+            "name": self.name,
             "phone": self.phone,
             "addresses": self.addresses,
         }
