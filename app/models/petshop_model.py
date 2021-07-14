@@ -10,7 +10,7 @@ class PetshopModel(db.Model):
 
     name = Column(String(150), nullable=False)
     email = Column(String(150), nullable=False, unique=True)
-    password = Column(String(150), nullable=False)
+    password_hash = Column(String(150), nullable=False)
     id_admin = Column(Boolean(), default=True)
 
     @property
@@ -19,10 +19,10 @@ class PetshopModel(db.Model):
 
     @password.setter
     def password(self, password_to_hash):
-        self.password = generate_password_hash(password_to_hash)
+        self.password_hash = generate_password_hash(password_to_hash)
 
     def check_password(self, password_to_compare):
-        return check_password_hash(self.password, password_to_compare)
+        return check_password_hash(self.password_hash, password_to_compare)
 
     @property
     def serialize(self):
