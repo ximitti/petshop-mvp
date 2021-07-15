@@ -19,21 +19,21 @@ def create_petshop(data):
         pet_shop = PetshopModel(**data)
         session.add(pet_shop)
         session.commit()
-        return jsonify(pet_shop), HTTPStatus.CREATED
+        return jsonify({"data": pet_shop}), HTTPStatus.CREATED
     except IntegrityError as _:
         return {"error": "Petshop already exists"}, HTTPStatus.NOT_ACCEPTABLE
 
 
 def get_petshop():
     pet_shop = PetshopModel.query.all()
-    return jsonify(pet_shop), HTTPStatus.OK
+    return jsonify({"data": pet_shop}), HTTPStatus.OK
 
 
 def get_petshop_by_id(id):
     pet_shop = PetshopModel.query.get(id)
     if not pet_shop:
         return {"msg": "Petshop not found"}
-    return jsonify(pet_shop), HTTPStatus.OK
+    return jsonify({"data": pet_shop}), HTTPStatus.OK
 
 
 def get_token(data):
@@ -50,7 +50,7 @@ def get_token(data):
         )
 
     access_token = create_access_token(identity=data["email"])
-    return jsonify(access_token=access_token), HTTPStatus.OK
+    return jsonify({"data": {"access_token": access_token}}), HTTPStatus.OK
 
 
 def update_petshop(data, email):
@@ -70,7 +70,7 @@ def update_petshop(data, email):
     session.add(pet_shop)
     session.commit()
 
-    return jsonify(pet_shop), HTTPStatus.OK
+    return jsonify({"data": pet_shop}), HTTPStatus.OK
 
 
 def check_valid_keys(data, valid_keys, key):

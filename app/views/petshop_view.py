@@ -1,13 +1,11 @@
-from flask import Blueprint, request, current_app, jsonify
-from http import HTTPStatus
+from flask import Blueprint, request, jsonify
 from flask_jwt_extended import (
     get_jwt_identity,
     jwt_required,
 )
 
-from sqlalchemy.exc import IntegrityError
+
 from app.exc.status_option import InvalidKeysError
-from app.models import PetshopModel
 from app.services import (
     create_petshop,
     get_token,
