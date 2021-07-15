@@ -23,6 +23,7 @@ class PetModel(db.Model):
             "id": self.id,
             "name": self.name,
             "species": self.species,
+            "size": self.size,
             "allergy": self.allergy,
             "breed": self.breed,
             "fur": self.fur,
