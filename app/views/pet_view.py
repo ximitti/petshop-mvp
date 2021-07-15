@@ -51,5 +51,38 @@ def retrieve_by_id(pet_id: int):
     if not pet:
         return {"error": "Pet not found"}, HTTPStatus.NOT_FOUND
     
-    return {"data": pet}, HTTPStatus.OK
+    return {"data": pet.serialize}, HTTPStatus.OK
 
+@bp.patch('/pets/<int:pet_id>')
+@jwt_required()
+def update(pet_id: int):
+    session = current_app.db.session
+    data = request.get_json()
+
+    try:
+        pet: PetModel = PetModel.query.get(pet_id)
+        pet.name = data["name"]
+        session.commit()
+        return {"data": pet.serialize}, HTTPStatus.OK
+    except KeyError:
+        return {"error": ""}
+
+
+@bp.delete('/pets/<int:pet_id>')
+@jwt_required()
+def delete(pet_id: int):
+    session = current_app.db.session
+    current_user_id = get_jwt_identity()
+
+    try:
+        pet: PetModel = PetModel.query.get(pet_id)
+
+        if pet.client_id == current_user_id:
+            session.delete(pet)
+            session.commit()
+            return {"message": "Successful delete"}, HTTPStatus.NO_CONTENT
+        else:
+            raise KeyError
+
+    except KeyError as _:
+        return {"error": "Unauthorized"}, HTTPStatus.UNAUTHORIZED
