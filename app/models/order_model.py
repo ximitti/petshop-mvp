@@ -9,7 +9,7 @@ class OrderModel(db.Model):
     id = Column(Integer, primary_key=True)
 
     date = Column(DateTime(), nullable=False, default=datetime.now())
-    finished_date = Column(DateTime(), nullable=False)
+    finished_date = Column(DateTime())
     pet_delivery = Column(Boolean, nullable=False, default=False)
 
     pet_id = Column(Integer, ForeignKey("pets.id"), nullable=False)

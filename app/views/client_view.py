@@ -1,16 +1,18 @@
-from app.models.client_model import ClientModel
-from flask import Blueprint, json, jsonify,current_app, request
+from flask import Blueprint, json, jsonify, current_app, request
 from http import HTTPStatus
+
+from app.models import ClientModel
 
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 
-bp  = Blueprint("bp", __name__, url_prefix="/clients")
+
+bp = Blueprint("bp", __name__, url_prefix="/clients")
 
 
 @bp.get("/")
 def get_clients():
     try:
-        
+
         clients = ClientModel.query.order_by(ClientModel.name).all()
         clients = [client.serialize for client in clients]
 
@@ -18,6 +20,7 @@ def get_clients():
 
     except:
         ...
+
 
 @bp.post("/register")
 def create_client():
@@ -34,11 +37,12 @@ def create_client():
         session.add(client)
         session.commit()
 
-        return {"message":"user created"}, 201
+        return {"message": "user created"}, 201
 
     except:
+
         return {"error":"User already exists"}, HTTPStatus.BAD_REQUEST
-    
+
 
 @bp.post("/login")
 def login():
@@ -57,6 +61,7 @@ def login():
     except:
         return jsonify({"message": "Bad email or password"}), 401
 
+
 @bp.get("/<int:id>")
 @jwt_required()
 def get_client_by_id(id):
@@ -69,6 +74,7 @@ def get_client_by_id(id):
         except:
             return {"message": "Not Found"}, 404
     return {"message": "unauthorized"}
+
 
 @bp.patch("/<int:id>")
 @jwt_required()
@@ -85,7 +91,7 @@ def update_client_by_id(id):
         except KeyError:
             return {"message": "avaiable keys : name"}, 404
         except:
-            return {"messege":"Not Found"}
+            return {"messege": "Not Found"}
     return {"message": "unauthorized"}
 
 
@@ -99,10 +105,11 @@ def delete_client_by_id(id):
             client = ClientModel.query.get(current_user_id)
             session.delete(client)
             session.commit()
-            return {"message":"deleted"}, 404
+            return {"message": "deleted"}, 404
         except:
-            return {"message":"Not Found"}, 404
+            return {"message": "Not Found"}, 404
     return {"message": "unauthorized"}
+
 
 # @bp("/<int:id>/address")
 # def get_create_address():
