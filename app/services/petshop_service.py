@@ -54,7 +54,7 @@ def get_token(data):
 
 
 def update_petshop(data, email):
-    valid_keys = ["name", "email", "password_hash", "is_admin"]
+    valid_keys = ["name", "email", "password", "is_admin"]
     session = current_app.db.session
     pet_shop = PetshopModel.query.filter_by(email=email).first()
 
@@ -62,7 +62,7 @@ def update_petshop(data, email):
 
         check_valid_keys(data, valid_keys, key)
 
-        if key == "password_hash":
+        if key == "password":
             pet_shop.password = value
         else:
             setattr(pet_shop, key, value)

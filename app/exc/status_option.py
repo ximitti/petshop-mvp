@@ -7,7 +7,7 @@ class InvalidKeysError(Exception):
             {
                 "error": {
                     "valid_options": feild_options,
-                    "recieved_option": data,
+                    "recieved_option": list(data.keys()),
                 }
             },
             HTTPStatus.BAD_REQUEST,
