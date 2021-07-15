@@ -1,5 +1,8 @@
-from app.models import ClientModel
 from flask import Blueprint, json, jsonify, current_app, request
+from http import HTTPStatus
+
+from app.models import ClientModel
+
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 
 
@@ -37,7 +40,8 @@ def create_client():
         return {"message": "user created"}, 201
 
     except:
-        ...
+
+        return {"error":"User already exists"}, HTTPStatus.BAD_REQUEST
 
 
 @bp.post("/login")
@@ -46,7 +50,7 @@ def login():
     try:
         client = ClientModel.query.filter_by(email=data["email"]).first()
 
-        if ClientModel.check_password(client, data["password"]):
+        if client.check_password(data["password"]):
 
             access_token = create_access_token(identity=client.id)
 
