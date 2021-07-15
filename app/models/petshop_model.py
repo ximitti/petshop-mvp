@@ -22,7 +22,7 @@ class PetshopModel(db.Model):
 
     @property
     def password(self):
-        raise ArithmeticError("Password is not acessible")
+        raise AttributeError("Password is not acessible")
 
     @password.setter
     def password(self, password_to_hash):
