@@ -1,7 +1,5 @@
-from flask import current_app, jsonify
-from http import HTTPStatus
-from sqlalchemy.exc import IntegrityError
-from app.exc.status_option import InvalidKeysError
+from flask import current_app
+from app.exc import InvalidKeysError, NotFoundError
 from app.models import PetshopModel
 from flask_jwt_extended import (
     create_access_token,
@@ -14,43 +12,36 @@ def create_petshop(data):
     for key, _ in data.items():
         check_valid_keys(data, valid_keys, key)
 
-    try:
-        session = current_app.db.session
-        pet_shop = PetshopModel(**data)
-        session.add(pet_shop)
-        session.commit()
-        return jsonify({"data": pet_shop}), HTTPStatus.CREATED
-    except IntegrityError as _:
-        return {"error": "Petshop already exists"}, HTTPStatus.BAD_REQUEST
+    session = current_app.db.session
+    pet_shop = PetshopModel(**data)
+    session.add(pet_shop)
+    session.commit()
+    return pet_shop
 
 
 def get_petshop():
-    pet_shop = PetshopModel.query.all()
-    return jsonify({"data": pet_shop}), HTTPStatus.OK
+    return PetshopModel.query.all()
 
 
 def get_petshop_by_id(id):
     pet_shop = PetshopModel.query.get(id)
     if not pet_shop:
-        return {"msg": "Petshop not found"}, HTTPStatus.BAD_REQUEST
-    return jsonify({"data": pet_shop}), HTTPStatus.OK
+        raise NotFoundError("Petshop not found")
+    return pet_shop
 
 
 def get_token(data):
     valid_keys = ["email", "password"]
+
     for key, _ in data.items():
         check_valid_keys(data, valid_keys, key)
 
     user = PetshopModel.query.filter_by(email=data["email"]).first()
 
     if not user or not user.check_password(data["password"]):
-        return (
-            jsonify({"msg": "Bad username or password"}),
-            HTTPStatus.NOT_FOUND,
-        )
+        raise NotFoundError("Bad username or password")
 
-    access_token = create_access_token(identity=data["email"])
-    return jsonify({"data": {"access_token": access_token}}), HTTPStatus.OK
+    return create_access_token(identity=data["email"])
 
 
 def update_petshop(data, email):
@@ -70,7 +61,7 @@ def update_petshop(data, email):
     session.add(pet_shop)
     session.commit()
 
-    return jsonify({"data": pet_shop}), HTTPStatus.OK
+    return pet_shop
 
 
 def check_valid_keys(data, valid_keys, key):
@@ -87,4 +78,4 @@ def delete_petshop():
     session.delete(pet_shop)
     session.commit()
 
-    return "", HTTPStatus.NO_CONTENT
+    return ""
