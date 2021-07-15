@@ -1,5 +1,5 @@
 from flask import current_app
-from app.exc.status_option import InvalidKeysError
+from app.exc import InvalidKeysError, NotFoundError
 from app.models import PetshopModel
 from flask_jwt_extended import (
     create_access_token,
@@ -24,7 +24,10 @@ def get_petshop():
 
 
 def get_petshop_by_id(id):
-    return PetshopModel.query.get(id)
+    pet_shop = PetshopModel.query.get(id)
+    if not pet_shop:
+        raise NotFoundError("Petshop not found")
+    return pet_shop
 
 
 def get_token(data):
@@ -36,7 +39,7 @@ def get_token(data):
     user = PetshopModel.query.filter_by(email=data["email"]).first()
 
     if not user or not user.check_password(data["password"]):
-        return None
+        raise NotFoundError("Bad username or password")
 
     return create_access_token(identity=data["email"])
 

@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 
 from app.exc.status_option import InvalidKeysError
+from app.exc.status_not_found import NotFoundError
 from app.services import (
     create_petshop,
     get_token,
@@ -36,41 +37,39 @@ def register():
     except InvalidKeysError as e:
         return jsonify(e.message), HTTPStatus.BAD_REQUEST
     except IntegrityError as _:
-        return {"error": "Petshop already exists"}, HTTPStatus.BAD_REQUEST
+        return jsonify(error="Petshop already exists"), HTTPStatus.BAD_REQUEST
 
 
 @bp.post("/petshop/login")
 def login():
-    data = request.get_json()
     try:
+        data = request.get_json()
         access_token = get_token(data)
-        if not access_token:
-            return (
-                jsonify({"msg": "Bad username or password"}),
-                HTTPStatus.NOT_FOUND,
-            )
-        return jsonify({"data": {"access_token": access_token}}), HTTPStatus.OK
+        return jsonify(data={"access_token": access_token}), HTTPStatus.OK
     except InvalidKeysError as e:
         return jsonify(e.message), HTTPStatus.BAD_REQUEST
+    except NotFoundError as e:
+        return (jsonify(e.message), HTTPStatus.NOT_FOUND)
 
 
 @bp.get("/petshop/<int:id>")
 @jwt_required()
 def get_by_id(id):
-    pet_shop = get_petshop_by_id(id)
-    if not pet_shop:
-        return {"msg": "Petshop not found"}, HTTPStatus.BAD_REQUEST
-    return jsonify({"data": pet_shop}), HTTPStatus.OK
+    try:
+        pet_shop = get_petshop_by_id(id)
+        return jsonify(data=pet_shop), HTTPStatus.OK
+    except NotFoundError as e:
+        return jsonify(e.message), HTTPStatus.BAD_REQUEST
 
 
 @bp.patch("/petshop")
 @jwt_required()
 def patch():
-    data = request.get_json()
-    email = get_jwt_identity()
     try:
+        data = request.get_json()
+        email = get_jwt_identity()
         pet_shop = update_petshop(data, email)
-        return jsonify({"data": pet_shop}), HTTPStatus.OK
+        return jsonify(data=pet_shop), HTTPStatus.OK
     except InvalidKeysError as e:
         return jsonify(e.message), HTTPStatus.BAD_REQUEST
 
