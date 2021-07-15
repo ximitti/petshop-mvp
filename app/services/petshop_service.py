@@ -21,7 +21,7 @@ def create_petshop(data):
         session.commit()
         return jsonify({"data": pet_shop}), HTTPStatus.CREATED
     except IntegrityError as _:
-        return {"error": "Petshop already exists"}, HTTPStatus.NOT_ACCEPTABLE
+        return {"error": "Petshop already exists"}, HTTPStatus.BAD_REQUEST
 
 
 def get_petshop():
@@ -32,7 +32,7 @@ def get_petshop():
 def get_petshop_by_id(id):
     pet_shop = PetshopModel.query.get(id)
     if not pet_shop:
-        return {"msg": "Petshop not found"}
+        return {"msg": "Petshop not found"}, HTTPStatus.BAD_REQUEST
     return jsonify({"data": pet_shop}), HTTPStatus.OK
 
 
