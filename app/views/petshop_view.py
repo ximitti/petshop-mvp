@@ -18,13 +18,13 @@ from app.services import (
 bp = Blueprint("bp_petshot", __name__, url_prefix="/api")
 
 
-@bp.route("/petshop")
+@bp.get("/petshop")
 @jwt_required()
 def get():
     return get_petshop()
 
 
-@bp.route("/petshop/register", methods=["POST"])
+@bp.post("/petshop/register")
 def register():
     data = request.get_json()
     try:
@@ -33,7 +33,7 @@ def register():
         return e.message
 
 
-@bp.route("/petshop/login", methods=["POST"])
+@bp.post("/petshop/login")
 def login():
     data = request.get_json()
     try:
@@ -42,13 +42,13 @@ def login():
         return e.message
 
 
-@bp.route("/petshop/<int:id>")
+@bp.get("/petshop/<int:id>")
 @jwt_required()
 def get_by_id(id):
     return get_petshop_by_id(id)
 
 
-@bp.route("/petshop", methods=["PATCH"])
+@bp.patch("/petshop")
 @jwt_required()
 def patch():
     data = request.get_json()
@@ -59,7 +59,7 @@ def patch():
         return e.message
 
 
-@bp.route("/petshop", methods=["DELETE"])
+@bp.delete("/petshop")
 @jwt_required()
 def delete():
     return delete_petshop()
