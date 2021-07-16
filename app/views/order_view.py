@@ -7,6 +7,7 @@ from app.models import OrderModel, OrderServicesModel, ServicesModel
 
 bp = Blueprint("bp_order", __name__, url_prefix="/api")
 
+# TODO: trazer todos os serviços e montar a saida
 
 @bp.post("/orders/")
 @jwt_required()
@@ -29,9 +30,8 @@ def register() -> tuple:
 @jwt_required()
 def get() -> tuple:
 
-    # TODO: trazer todos os serviços e montar a saida
     output: list = []
-    # output: list = [order.serialize for order in orders]
+
     orders: OrderModel = OrderModel.query.all()
 
     for order in orders:
@@ -57,7 +57,6 @@ def get() -> tuple:
 
         output.append(order_json)
 
-    print(query)
 
     return (
         jsonify(orders=output),
@@ -100,10 +99,36 @@ def get_by_id(order_id: int) -> tuple:
 @bp.patch("/orders/<int:order_id>")
 @jwt_required()
 def update(order_id: int):
-    ...
+    session = current_app.db.session
+
+    data = request.get_json()
+
+    order: OrderModel = OrderModel.query.get(order_id)
+
+    for k, v in data.items():
+        setattr(order, k, v)
+
+    session.add(order)
+    session.commit()
+
+    return (
+        jsonify(data=order.serialize),
+        HTTPStatus.ACCEPTED,
+    )
 
 
 @bp.delete("/orders/<int:order_id>")
 @jwt_required()
 def delete(order_id: int):
-    ...
+    session = current_app.db.session
+
+    order: OrderModel = OrderModel.query.get(order_id)
+
+    session.delete(order)
+    session.commit()
+
+    return (
+        "",
+        HTTPStatus.NO_CONTENT,
+    )
+
