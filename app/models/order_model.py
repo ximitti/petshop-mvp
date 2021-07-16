@@ -18,8 +18,10 @@ class OrderModel(db.Model):
     def serialize(self):
         return {
             "id": self.id,
-            "date": self.date,
-            "finished_date": self.finished_date,
+            "date": self.date.strftime("%d/%m/%Y - %H:%M"),
+            "finished_date": self.finished_date.strftime("%d/%m/%Y - %H:%M")
+            if self.finished_date
+            else "",
             "pet_delivery": self.pet_delivery,
             "pet_id": self.pet_id,
         }

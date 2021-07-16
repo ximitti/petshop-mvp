@@ -1,16 +1,18 @@
 from flask import current_app, jsonify
 from http import HTTPStatus
 from sqlalchemy.exc import IntegrityError
-from app.exc.status_option import InvalidKeysError
-from app.models import ClientModel
+from app.exc import InvalidKeysError, NotFoundError
+from app.models import ClientModel, PetshopModel
 from flask_jwt_extended import (
     create_access_token,
     get_jwt_identity,
 )
 
+
 def get_clients():
     client = ClientModel.query.all()
     return jsonify(client), HTTPStatus.OK
+
 
 def create_client(data):
     valid_keys = ["name", "email", "password", "phone", "address"]
@@ -24,7 +26,7 @@ def create_client(data):
         session.add(client)
         session.commit()
 
-        return {"message":"user created"}, HTTPStatus.CREATED
+        return {"message": "user created"}, HTTPStatus.CREATED
 
     except IntegrityError as _:
         return {"error": "Petshop already exists"}, HTTPStatus.NOT_ACCEPTABLE
@@ -32,19 +34,17 @@ def create_client(data):
 
 def get_token(data):
     valid_keys = ["email", "password"]
+
     for key, _ in data.items():
         check_valid_keys(data, valid_keys, key)
-    client = ClientModel.query.filter_by(email=data["email"]).first()
 
-    if not client or not client.check_password(data["password"]):
-        return (
-            jsonify({"msg": "Bad username or password"}),
-            HTTPStatus.NOT_FOUND,
-        )
+    user = PetshopModel.query.filter_by(email=data["email"]).first()
 
-    access_token = create_access_token(identity=client.id)
+    if not user or not user.check_password(data["password"]):
+        raise NotFoundError("Bad username or password")
 
-    return jsonify(access_token=access_token), HTTPStatus.OK
+    return create_access_token(identity=data["email"])
+
 
 def get_client_by_id(id):
     client = ClientModel.query.get(id)
@@ -72,6 +72,7 @@ def update_client(data, id):
 
     return jsonify(client), HTTPStatus.OK
 
+
 def delete_client(id):
     session = current_app.db.session
     client = ClientModel.query.get(id)
@@ -80,7 +81,6 @@ def delete_client(id):
     session.commit()
 
     return "", HTTPStatus.NO_CONTENT
-
 
 
 def check_valid_keys(data, valid_keys, key):
