@@ -1,8 +1,8 @@
-"""empty message
+"""v1 Heroku
 
-Revision ID: b14af8e0584e
+Revision ID: 0505090cfad4
 Revises: 
-Create Date: 2021-07-13 21:25:02.486159
+Create Date: 2021-07-15 22:47:48.470918
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'b14af8e0584e'
+revision = '0505090cfad4'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -32,7 +32,7 @@ def upgrade():
     sa.Column('name', sa.String(length=150), nullable=False),
     sa.Column('email', sa.String(length=150), nullable=False),
     sa.Column('password_hash', sa.String(length=150), nullable=False),
-    sa.Column('id_admin', sa.Boolean(), nullable=True),
+    sa.Column('is_admin', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email')
     )
@@ -71,7 +71,7 @@ def upgrade():
     op.create_table('orders',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('date', sa.DateTime(), nullable=False),
-    sa.Column('finished_date', sa.DateTime(), nullable=False),
+    sa.Column('finished_date', sa.DateTime(), nullable=True),
     sa.Column('pet_delivery', sa.Boolean(), nullable=False),
     sa.Column('pet_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['pet_id'], ['pets.id'], ),
