@@ -6,6 +6,7 @@ from app.services.petshop_service import (
     get_petshop,
     get_petshop_by_id,
 )
+
 from app.services.client_service import (
     create_client,
     get_clients,
@@ -13,4 +14,9 @@ from app.services.client_service import (
     get_client_by_id,
     update_client,
     delete_client
+)
+
+from app.services.pet_service import (
+    get_pets,
+    get_pet_by_id
 )
