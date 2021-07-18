@@ -12,7 +12,7 @@ class AddressModel(db.Model):
     street = Column(String(150), nullable=False)
     number = Column(String(5), nullable=False)
     complement = Column(String(150))
-    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
+    client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
 
     @property
     def serialize(self):
