@@ -21,4 +21,6 @@ from app.services.pet_service import (
     get_pets,
     get_pet_by_id,
     get_pet_orders,
+    update_pet,
+    delete_pet
 )

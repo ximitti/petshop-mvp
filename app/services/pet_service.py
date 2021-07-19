@@ -1,3 +1,4 @@
+from app.exc.unauthorized import Unauthorized
 from app.models.order_model import OrderModel
 from app.services.client_service import check_valid_keys
 from app.exc.status_not_found import NotFoundError
@@ -49,3 +50,25 @@ def get_pet_orders(pet_id: int):
     orders: OrderModel = OrderModel.query.filter_by(pet_id=pet_id).all()
     orders = [order.serialize for order in orders]
     return orders
+
+def update_pet(data, pet_id: int):
+    pet = get_pet_by_id(pet_id)
+    session = current_app.db.session
+    valid_keys = ["name", "species", "size", "allergy", "breed", "fur", "photo_url", "client_id"]
+    for key, value in data.items():
+        check_valid_keys(data, valid_keys, key)
+
+        setattr(pet, key, value)
+
+    session.add(pet)
+    session.commit()
+    return pet
+
+def delete_pet(pet_id: int, current_user_id: int) -> None:
+    session = current_app.db.session
+    pet = get_pet_by_id(pet_id)
+    if pet.client_id == current_user_id:
+        session.delete(pet)
+        session.commit()
+    else:
+        raise Unauthorized()
