@@ -1,77 +1,40 @@
+from http import HTTPStatus
+from app.exc.status_option import InvalidKeysError
 from app.models.services_model import ServicesModel
-from flask import Blueprint, json, jsonify, current_app, request
-from flask_jwt_extended import (
-    get_jwt_identity,
+from flask import Blueprint, json, jsonify,current_app, request
+from flask_jwt_extended import (get_jwt_identity,
     jwt_required,
 )
+from app.services.services_service import (get_services, create_service, get_service_by_id, update_service)
 
-bp = Blueprint("bp_service", __name__, url_prefix="/api")
+bp  = Blueprint("bp", __name__, url_prefix="/services")
 
-
-@bp.get("/services/")
-def get_services():
+@bp.get("/")
+def get():
     try:
+        return jsonify(data=services), HTTPStatus.OK
+    except NotFoundError as e:
+        return jsonify(e.message), HTTPStatus.NOT_FOUND
 
-        services = ServicesModel.query.order_by(ServicesModel.name).all()
-        services = [service.serialize for service in services]
-
-        return jsonify(services)
-
-    except:
-        ...
-
-
-@bp.post("/services/")
+@bp.post("/register")
 @jwt_required()
-def register():
-    session = current_app.db.session
+def create():
     try:
         data = request.get_json()
+        service = create_service(data)
+        return json(data=service.serialize), HTTPStatus.CREATED
+    except InvalidKeysError as e:
+        return jsonify(e.message), HTTPStatus.BAD_REQUEST
 
-        service = ServicesModel(**data)
-
-        session.add(service)
-        session.commit()
-
-        return {"message": "service created"}, 201
-
-    except:
-        ...
-
-
-@bp.get("/services/<int:id>")
-@jwt_required()
-def get_service_by_id(id):
-    current_service_id = get_jwt_identity()
+@bp.get("/<int:id>")
+def retrieve_by_id(service_id):
     try:
-        service = ServicesModel.query.get(id)
+        service = get_service_by_id(service_id)
+        return json(data=service.serialize), HTTPStatus.OK
+    except NotFoundError as e:
+        return jsonify(e.message), HTTPStatus.NOT_FOUND
 
-        return jsonify(service.serialize)
-    except:
-        return {"message": "Not Found"}, 404
-
-    return {"message": "unauthorized"}
-
-
-# @bp.post("/<int:id>")
-# @jwt_required()
-# def create_service_by_id():
-#     session = current_app.db.session
-#     try:
-#         data = request.get_json()
-
-#         service = ServicesModel(**data)
-
-#         session.add(service)
-#         session.commit()
-
-#         return {"message":"service created"}, 201
-
-#     except:
-#         ...
-
-
-@bp.patch("/services/<int:id>")
+@bp.patch("/<int:id>")
 @jwt_required()
 def update_service_by_id(id):
     session = current_app.db.session
@@ -86,11 +49,11 @@ def update_service_by_id(id):
         except KeyError:
             return {"message": "avaiable keys : name"}, 404
         except:
-            return {"messege": "Not Found"}
+            return {"messege":"Not Found"}
     return {"message": "unauthorized"}
 
 
-@bp.delete("/services/<int:id>")
+@bp.delete("/<int:id>")
 @jwt_required()
 def delete_service_by_id(id):
     current_service_id = get_jwt_identity()
@@ -100,7 +63,7 @@ def delete_service_by_id(id):
             service = ServicesModel.query.get(current_service_id)
             session.delete(service)
             session.commit()
-            return {"message": "deleted"}, 404
+            return {"message":"deleted"}, 404
         except:
-            return {"message": "Not Found"}, 404
+            return {"message":"Not Found"}, 404
     return {"message": "unauthorized"}
