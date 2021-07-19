@@ -1,3 +1,4 @@
+from app.exc.status_option import InvalidKeysError
 from app.exc.status_not_found import NotFoundError
 from app.models.pet_model import PetModel
 from app.models.order_model import OrderModel
@@ -6,6 +7,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 from http import HTTPStatus
 
 from app.services import (
+    create_pet,
     get_pets,
     get_pet_by_id
 )
@@ -16,21 +18,18 @@ bp = Blueprint("bp_pet", __name__, url_prefix="/api")
 @bp.post('/pets/')
 @jwt_required()
 def create():
-    session = current_app.db.session
     data = request.get_json()
     client_id = data['client_id']
     pet_owner_id = get_jwt_identity()
 
     try:   
         if client_id == pet_owner_id:
-            pet: PetModel = PetModel(**data)
-            session.add(pet)
-            session.commit()
-            return {"message": "Pet created", "data": pet.serialize}, HTTPStatus.CREATED
+            pet = create_pet(client_id, pet_owner_id, data)
+            return jsonify(data=pet.serialize), HTTPStatus.CREATED
         else:
-            raise KeyError  
-    except KeyError as _:
-        return {"error": "Unauthorized"}, HTTPStatus.UNAUTHORIZED
+            return jsonify(error="Unauthorized"), HTTPStatus.UNAUTHORIZED 
+    except InvalidKeysError as e:
+        return jsonify(e.message), HTTPStatus.BAD_REQUEST
 
 @bp.get('/pets/')
 @jwt_required()

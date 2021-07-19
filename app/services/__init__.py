@@ -17,6 +17,8 @@ from app.services.client_service import (
 )
 
 from app.services.pet_service import (
+    create_pet,
     get_pets,
-    get_pet_by_id
+    get_pet_by_id,
+    
 )
