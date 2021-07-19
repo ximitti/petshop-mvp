@@ -1,3 +1,4 @@
+from app.models.order_model import OrderModel
 from app.services.client_service import check_valid_keys
 from app.exc.status_not_found import NotFoundError
 from app.models.pet_model import PetModel
@@ -43,3 +44,8 @@ def get_pet_by_id(pet_id: int):
     if not pet:
         raise NotFoundError("Pet not found")
     return pet
+
+def get_pet_orders(pet_id: int):
+    orders: OrderModel = OrderModel.query.filter_by(pet_id=pet_id).all()
+    orders = [order.serialize for order in orders]
+    return orders

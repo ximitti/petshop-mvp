@@ -1,3 +1,4 @@
+from app.services.pet_service import get_pet_orders
 from app.exc.status_option import InvalidKeysError
 from app.exc.status_not_found import NotFoundError
 from app.models.pet_model import PetModel
@@ -18,11 +19,10 @@ bp = Blueprint("bp_pet", __name__, url_prefix="/api")
 @bp.post('/pets/')
 @jwt_required()
 def create():
-    data = request.get_json()
-    client_id = data['client_id']
-    pet_owner_id = get_jwt_identity()
-
     try:   
+        data = request.get_json()
+        pet_owner_id = get_jwt_identity()
+        client_id = data['client_id']
         if client_id == pet_owner_id:
             pet = create_pet(client_id, pet_owner_id, data)
             return jsonify(data=pet.serialize), HTTPStatus.CREATED
@@ -89,18 +89,13 @@ def delete(pet_id: int):
 @bp.get('/pets/<int:pet_id>/orders')
 @jwt_required()
 def get_orders_by_pet(pet_id: int):
-    pet_owner_id = get_jwt_identity()
-
     try:
-        pet: PetModel = PetModel.query.get(pet_id)
-        if not pet:
-            raise KeyError
-
+        pet_owner_id = get_jwt_identity()
+        pet = get_pet_by_id(pet_id)
         if pet.client_id == pet_owner_id:
-            orders: OrderModel = OrderModel.query.filter_by(pet_id=pet_id).all()
-            orders = [order.serialize for order in orders]
-            return {"data": orders}, HTTPStatus.OK
+            orders = get_pet_orders(pet_id)
+            return jsonify(data=orders), HTTPStatus.OK
         else:
             return {"error": "Unauthorized"}, HTTPStatus.UNAUTHORIZED
-    except KeyError as _:
-        return {"error": "Pet not found"}, HTTPStatus.NOT_FOUND
+    except NotFoundError as e:
+        return e.message, HTTPStatus.NOT_FOUND
