@@ -57,8 +57,6 @@ def get() -> tuple:
 
         output.append(order_json)
 
-    print(query)
-
     return (
         jsonify(orders=output),
         HTTPStatus.OK,
