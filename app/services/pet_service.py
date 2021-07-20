@@ -1,4 +1,4 @@
-from app.exc.unauthorized import Unauthorized
+from app.exc.status_unauthorized import Unauthorized
 from app.models.order_model import OrderModel
 from app.services.client_service import check_valid_keys
 from app.exc.status_not_found import NotFoundError

@@ -1,4 +1,4 @@
-from app.exc.unauthorized import Unauthorized
+from app.exc.status_unauthorized import Unauthorized
 from app.services.pet_service import delete_pet, get_pet_orders, update_pet
 from app.exc.status_option import InvalidKeysError
 from app.exc.status_not_found import NotFoundError
