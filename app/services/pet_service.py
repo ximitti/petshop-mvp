@@ -1,6 +1,7 @@
+from flask_jwt_extended.utils import get_jwt
+from app.services.helpers import is_admin
 from app.exc.status_unauthorized import Unauthorized
 from app.models.order_model import OrderModel
-from app.services.client_service import check_valid_keys
 from app.exc.status_not_found import NotFoundError
 from app.models.pet_model import PetModel
 from flask import current_app, jsonify
@@ -51,24 +52,27 @@ def get_pet_orders(pet_id: int):
     orders = [order.serialize for order in orders]
     return orders
 
-def update_pet(data, pet_id: int):
+def update_pet(data, pet_id: int, current_user_id: int):
     pet = get_pet_by_id(pet_id)
     session = current_app.db.session
-    valid_keys = ["name", "species", "size", "allergy", "breed", "fur", "photo_url", "client_id"]
-    for key, value in data.items():
-        check_valid_keys(data, valid_keys, key)
+    if pet.client_id == current_user_id or is_admin(get_jwt()):
+        valid_keys = ["name", "species", "size", "allergy", "breed", "fur", "photo_url", "client_id"]
+        for key, value in data.items():
+            check_valid_keys(data, valid_keys, key)
 
-        setattr(pet, key, value)
+            setattr(pet, key, value)
 
-    session.add(pet)
-    session.commit()
-    return pet
+        session.add(pet)
+        session.commit()
+        return pet
+    else:
+        raise Unauthorized
 
 def delete_pet(pet_id: int, current_user_id: int) -> None:
     session = current_app.db.session
     pet = get_pet_by_id(pet_id)
-    if pet.client_id == current_user_id:
+    if pet.client_id == current_user_id or is_admin(get_jwt()):
         session.delete(pet)
         session.commit()
     else:
-        raise Unauthorized()
+        raise Unauthorized

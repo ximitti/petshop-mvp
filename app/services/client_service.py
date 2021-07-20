@@ -5,7 +5,7 @@ from flask_jwt_extended import (
     create_access_token,
 )
 
-class ClientServices :
+class ClientServices:
     def get_clients():
         clients = ClientModel.query.order_by(ClientModel.name).all()
 
@@ -115,7 +115,7 @@ class ClientServices :
         session.commit()
         return ""
 
-
+    
     def check_valid_keys(data, valid_keys, key):
         if key not in valid_keys:
             raise InvalidKeysError(data, valid_keys)

@@ -18,7 +18,7 @@ from app.services import (
     get_petshop_by_id,
 )
 
-bp = Blueprint("bp_petshot", __name__, url_prefix="/api")
+bp = Blueprint("bp_petshop", __name__, url_prefix="/api")
 
 
 @bp.get("/petshop")

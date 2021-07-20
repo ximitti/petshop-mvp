@@ -7,6 +7,6 @@ from app.services.petshop_service import (
     get_petshop_by_id,
 )
 
-from app.services.client_service import (
-        ClientServices
- )
+from app.services.client_service import ClientServices
+
+from app.services.pet_service import *

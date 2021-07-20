@@ -1,3 +1,8 @@
+from app.exc.status_unauthorized import Unauthorized
+from http import HTTPStatus
+from app.exc.status_not_found import NotFoundError
+from app.services.helpers import is_admin
+from flask_jwt_extended.utils import get_jwt
 from app.models.services_model import ServicesModel
 from flask import Blueprint, json, jsonify, current_app, request
 from flask_jwt_extended import (
@@ -74,33 +79,34 @@ def get_service_by_id(id):
 @bp.patch("/services/<int:id>")
 @jwt_required()
 def update_service_by_id(id):
-    session = current_app.db.session
-    current_service_id = get_jwt_identity()
-    data = request.get_json()
-    if current_service_id == id:
         try:
-            service = ServicesModel.query.get(current_service_id)
+            session = current_app.db.session
+            data = request.get_json()
+            is_admin(get_jwt())
+            service = ServicesModel.query.get(id)
             service.name = data["name"]
+            session.add(service)
             session.commit()
             return jsonify(service.serialize)
         except KeyError:
             return {"message": "avaiable keys : name"}, 404
         except:
-            return {"messege": "Not Found"}
-    return {"message": "unauthorized"}
+            return {"messege": "Not Found"},
 
 
 @bp.delete("/services/<int:id>")
 @jwt_required()
 def delete_service_by_id(id):
-    current_service_id = get_jwt_identity()
-    session = current_app.db.session
-    if current_service_id == id:
-        try:
-            service = ServicesModel.query.get(current_service_id)
-            session.delete(service)
-            session.commit()
-            return {"message": "deleted"}, 404
-        except:
-            return {"message": "Not Found"}, 404
-    return {"message": "unauthorized"}
+    try:
+        is_admin(get_jwt())
+        session = current_app.db.session
+        service = ServicesModel.query.get(id)
+        if not service:
+            raise NotFoundError("Service not found")
+        session.delete(service)
+        session.commit()
+        return "", HTTPStatus.NO_CONTENT
+    except NotFoundError as e:
+        return jsonify(e.message), HTTPStatus.NOT_FOUND
+    except Unauthorized as e:
+        return jsonify(e.message), HTTPStatus.UNAUTHORIZED
