@@ -1,9 +1,9 @@
+from app.exc.status_unauthorized import Unauthorized
+from app.services.helpers import is_admin
 from http import HTTPStatus
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import (
-    get_jwt_identity,
-    jwt_required,
-)
+from flask_jwt_extended import get_jwt_identity, jwt_required, get_jwt
+
 from sqlalchemy.exc import IntegrityError
 
 
@@ -11,7 +11,7 @@ from app.exc.status_option import InvalidKeysError
 from app.exc.status_not_found import NotFoundError
 from app.services import (
     create_petshop,
-    get_token,
+    get_admin_token,
     update_petshop,
     delete_petshop,
     get_petshop,
@@ -24,14 +24,18 @@ bp = Blueprint("bp_petshot", __name__, url_prefix="/api")
 @bp.get("/petshop")
 @jwt_required()
 def get():
-    pet_shop = get_petshop()
-    return jsonify({"data": pet_shop}), HTTPStatus.OK
+    try:
+        is_admin(get_jwt())
+        pet_shop = get_petshop()
+        return jsonify({"data": pet_shop}), HTTPStatus.OK
+    except Unauthorized as e:
+        return jsonify(e.message), HTTPStatus.UNAUTHORIZED
 
 
 @bp.post("/petshop/register")
 def register():
-    data = request.get_json()
     try:
+        data = request.get_json()
         pet_shop = create_petshop(data)
         return jsonify({"data": pet_shop}), HTTPStatus.CREATED
     except InvalidKeysError as e:
@@ -44,7 +48,7 @@ def register():
 def login():
     try:
         data = request.get_json()
-        access_token = get_token(data)
+        access_token = get_admin_token(data)
         return jsonify(data={"access_token": access_token}), HTTPStatus.OK
     except InvalidKeysError as e:
         return jsonify(e.message), HTTPStatus.BAD_REQUEST
@@ -56,8 +60,11 @@ def login():
 @jwt_required()
 def get_by_id(id):
     try:
+        is_admin(get_jwt())
         pet_shop = get_petshop_by_id(id)
         return jsonify(data=pet_shop), HTTPStatus.OK
+    except Unauthorized as e:
+        return jsonify(e.message), HTTPStatus.UNAUTHORIZED
     except NotFoundError as e:
         return jsonify(e.message), HTTPStatus.BAD_REQUEST
 
@@ -66,15 +73,24 @@ def get_by_id(id):
 @jwt_required()
 def patch():
     try:
+        is_admin(get_jwt())
         data = request.get_json()
         email = get_jwt_identity()
         pet_shop = update_petshop(data, email)
         return jsonify(data=pet_shop), HTTPStatus.OK
+    except Unauthorized as e:
+        return jsonify(e.message), HTTPStatus.UNAUTHORIZED
     except InvalidKeysError as e:
         return jsonify(e.message), HTTPStatus.BAD_REQUEST
 
 
-@bp.delete("/petshop")
+@bp.delete("/petshop/<int:id>")
 @jwt_required()
-def delete():
-    return delete_petshop(), HTTPStatus.NO_CONTENT
+def delete(id):
+    try:
+        is_admin(get_jwt())
+        return delete_petshop(id), HTTPStatus.NO_CONTENT
+    except Unauthorized as e:
+        return jsonify(e.message), HTTPStatus.UNAUTHORIZED
+    except NotFoundError as e:
+        return jsonify(e.message), HTTPStatus.BAD_REQUEST

@@ -1,3 +1,4 @@
+from app.exc.status_unauthorized import Unauthorized
 from flask import current_app
 from app.exc import InvalidKeysError, NotFoundError
 from app.models import PetshopModel
@@ -5,6 +6,7 @@ from flask_jwt_extended import (
     create_access_token,
     get_jwt_identity,
 )
+import ipdb
 
 
 def create_petshop(data):
@@ -30,7 +32,7 @@ def get_petshop_by_id(id):
     return pet_shop
 
 
-def get_token(data):
+def get_admin_token(data):
     valid_keys = ["email", "password"]
 
     for key, _ in data.items():
@@ -41,7 +43,9 @@ def get_token(data):
     if not user or not user.check_password(data["password"]):
         raise NotFoundError("Bad username or password")
 
-    return create_access_token(identity=data["email"])
+    return create_access_token(
+        identity=data["email"], additional_claims={"is_admin": user.is_admin}
+    )
 
 
 def update_petshop(data, email):
@@ -69,13 +73,23 @@ def check_valid_keys(data, valid_keys, key):
         raise InvalidKeysError(data, valid_keys)
 
 
-def delete_petshop():
+def delete_petshop(id):
     session = current_app.db.session
     email = get_jwt_identity()
 
     pet_shop = PetshopModel.query.filter_by(email=email).first()
+    pet_shop_to_be_deleted = PetshopModel.query.get(id)
 
-    session.delete(pet_shop)
+    if not pet_shop_to_be_deleted:
+        raise NotFoundError("User Petshop not found")
+
+    if pet_shop.id == pet_shop_to_be_deleted.id:
+        raise Unauthorized("You can't delete your own user")
+
+    if pet_shop_to_be_deleted.is_admin:
+        raise Unauthorized("You can't delete admin users")
+
+    session.delete(pet_shop_to_be_deleted)
     session.commit()
 
     return ""
