@@ -12,7 +12,7 @@ class OrderModel(db.Model):
     finished_date = Column(DateTime())
     pet_delivery = Column(Boolean, nullable=False, default=False)
 
-    pet_id = Column(Integer, ForeignKey("pets.id"), nullable=False)
+    pet_id = Column(Integer, ForeignKey("pets.id", ondelete="CASCADE"), nullable=False)
 
     @property
     def serialize(self):
