@@ -15,7 +15,7 @@ class PetModel(db.Model):
     fur = Column(String(50))
     photo_url = Column(Text())
 
-    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
+    client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
 
     @property
     def serialize(self):
