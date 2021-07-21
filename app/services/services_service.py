@@ -13,7 +13,7 @@ def check_valid_keys(data, valid_keys, key):
 
 def get_services():
     services: ServicesModel =  ServicesModel.query.all()
-    return services
+    return [service.serialize for service in services]
 
 def create_service(data):
     valid_keys = ["name", "description", "price"]
@@ -27,32 +27,27 @@ def create_service(data):
     return service
 
 def get_service_by_id(service_id: int):
-    current_service_id = get_jwt_identity()
-    if current_service_id == id:
-        service: ServicesModel = ServicesModel.query.get(service_id)
-        if not service:
-             raise NotFoundError("Service not found")
-        return service
-    return HTTPStatus.UNAUTHORIZED
+    service: ServicesModel = ServicesModel.query.get(service_id)
+    if not service:
+        raise NotFoundError("Service not found")
+    return service
+
 
 def update_service(data, service_id: int):
-    current_service_id = get_jwt_identity()
-    if current_service_id == id:
-        service = get_service_by_id(service_id)
-        session = current_app.db.session
-        valid_keys = ["name", "description", "price"]
-        for key, value in data.items():
-            check_valid_keys(data, valid_keys, key)
+    service = get_service_by_id(service_id)
+    session = current_app.db.session
+    valid_keys = ["name", "description", "price"]
+    for key, value in data.items():
+        check_valid_keys(data, valid_keys, key)
 
-            setattr(service, key, value)
+        setattr(service, key, value)
 
-        session.add(service)
-        session.commit()
+    session.add(service)
+    session.commit()
 
-        if not service:
-             raise NotFoundError("Service not found")
-        return service
-    return HTTPStatus.UNAUTHORIZED
+    if not service:
+            raise NotFoundError("Service not found")
+    return service
 
 def delete_service(service_id: int):
     session = current_app.db.session

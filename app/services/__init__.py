@@ -10,3 +10,5 @@ from app.services.petshop_service import (
 from app.services.client_service import ClientServices
 
 from app.services.pet_service import *
+
+from app.services.services_service import *

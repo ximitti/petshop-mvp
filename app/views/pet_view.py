@@ -57,8 +57,8 @@ def retrieve_by_id(pet_id: int):
 @bp.patch('/pets/<int:pet_id>')
 @jwt_required()
 def update(pet_id: int):
-    current_user_id = get_jwt_identity()
     try:
+        current_user_id = get_jwt_identity()
         data = request.get_json()
         pet = update_pet(data, pet_id, current_user_id)
         return jsonify(data=pet.serialize), HTTPStatus.OK
