@@ -11,6 +11,8 @@ from app.services.petshop_service import (
 
 from app.services.client_service import ClientServices
 
+from app.services.services_service import *
+
 from app.services.pet_service import (
     create_pet,
     get_pets,
@@ -27,3 +29,5 @@ from .order_service import (
     update_order_by_id,
     delete_order_by_id,
 )
+
+from app.services.pet_service import *
