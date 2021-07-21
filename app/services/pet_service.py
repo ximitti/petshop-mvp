@@ -1,4 +1,4 @@
-from app.exc.unauthorized import Unauthorized
+from app.exc.status_unauthorized import Unauthorized
 from app.models.order_model import OrderModel
 from app.exc.status_not_found import NotFoundError
 from app.models.pet_model import PetModel
