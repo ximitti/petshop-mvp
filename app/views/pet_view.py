@@ -1,4 +1,4 @@
-from app.exc.unauthorized import Unauthorized
+from app.exc.status_unauthorized import Unauthorized
 from app.services.pet_service import delete_pet, get_pet_orders, update_pet
 from app.exc.status_option import InvalidKeysError
 from app.exc.status_not_found import NotFoundError
@@ -28,9 +28,11 @@ def create():
             pet = create_pet(client_id, pet_owner_id, data)
             return jsonify(data=pet.serialize), HTTPStatus.CREATED
         else:
-            return jsonify(error="Unauthorized"), HTTPStatus.UNAUTHORIZED 
+            raise Unauthorized
     except InvalidKeysError as e:
         return jsonify(e.message), HTTPStatus.BAD_REQUEST
+    except Unauthorized as e:
+        return jsonify(e.message), HTTPStatus.UNAUTHORIZED
 
 @bp.get('/pets/')
 @jwt_required()
@@ -56,13 +58,16 @@ def retrieve_by_id(pet_id: int):
 @jwt_required()
 def update(pet_id: int):
     try:
+        current_user_id = get_jwt_identity()
         data = request.get_json()
-        pet = update_pet(data, pet_id)
+        pet = update_pet(data, pet_id, current_user_id)
         return jsonify(data=pet.serialize), HTTPStatus.OK
     except NotFoundError as e:
         return jsonify(e.message), HTTPStatus.NOT_FOUND
     except InvalidKeysError as e:
         return jsonify(e.message), HTTPStatus.BAD_REQUEST
+    except Unauthorized as e:
+        return jsonify(e.message), HTTPStatus.UNAUTHORIZED
 
 
 @bp.delete('/pets/<int:pet_id>')
@@ -71,11 +76,6 @@ def delete(pet_id: int):
     try:
         current_user_id = get_jwt_identity()
         delete_pet(pet_id, current_user_id)
-        # session = current_app.db.session
-        # pet = get_pet_by_id(pet_id)
-        # if pet.client_id == current_user_id:
-        #     session.delete(pet)
-        #     session.commit()
         return "", HTTPStatus.NO_CONTENT
     except NotFoundError as e:
         return jsonify(e.message), HTTPStatus.NOT_FOUND
@@ -93,6 +93,8 @@ def get_orders_by_pet(pet_id: int):
             orders = get_pet_orders(pet_id)
             return jsonify(data=orders), HTTPStatus.OK
         else:
-            return jsonify(error="Unauthorized"), HTTPStatus.UNAUTHORIZED
+            raise Unauthorized
     except NotFoundError as e:
         return jsonify(e.message), HTTPStatus.NOT_FOUND
+    except Unauthorized as e:
+        return jsonify(e.message), HTTPStatus.UNAUTHORIZED
