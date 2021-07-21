@@ -3,7 +3,7 @@ from app.exc import InvalidKeysError, NotFoundError, MissingKeysError
 
 from app.models import OrderModel, PetModel
 
-from .helpers import add_commit, delete_commit, check_valid_keys, check_missed_keys
+from .helpers import add_commit, delete_commit, check_valid_keys, check_missed_keys, is_admin
 
 
 class PetServices:
@@ -40,7 +40,7 @@ class PetServices:
 
         for pet in pets:
             if pet.name == data.get("name"):
-                raise IntegrityError
+                raise IntegrityError()
 
         pet: PetModel = PetModel(**data)
 
