@@ -79,11 +79,9 @@ def retrieve_by_id(pet_id: int) -> tuple:
 @jwt_required()
 def update(pet_id: int) -> tuple:
     try:
-        is_admin(get_jwt())
-
         pet_to_get_owner: dict = PetServices.get_pet_by_id(pet_id)
-        check_authorization(pet_to_get_owner.get("client_id"), get_jwt_identity())
-
+        if not check_authorization(pet_to_get_owner.get("client_id"), get_jwt_identity()):
+            is_admin(get_jwt())
         pet: dict = PetServices.update_pet(request.get_json(), pet_id)
 
         return (
@@ -114,10 +112,9 @@ def update(pet_id: int) -> tuple:
 @jwt_required()
 def delete(pet_id: int) -> tuple:
     try:
-        is_admin(get_jwt())
-
         pet_to_get_owner: dict = PetServices.get_pet_by_id(pet_id)
-        check_authorization(pet_to_get_owner.get("client_id"), get_jwt_identity())
+        if not check_authorization(pet_to_get_owner.get("client_id"), get_jwt_identity()):
+            is_admin(get_jwt())
 
         PetServices.delete_pet(pet_id)
         return (

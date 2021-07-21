@@ -1,3 +1,4 @@
+from sqlalchemy.sql.sqltypes import Integer
 from . import db
 from app.exc import InvalidKeysError, Unauthorized
 
@@ -35,5 +36,6 @@ def check_missed_keys(data, required_fields):
 
 
 def check_authorization(id: int, token_id: int) -> bool:
-    if token_id != id:
+    if type(token_id) == int and token_id != id:
         raise Unauthorized
+    return True

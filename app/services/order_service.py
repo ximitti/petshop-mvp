@@ -17,7 +17,7 @@ class OrderServices:
         if check_valid_keys(data, valid_keys):
             raise InvalidKeysError(data, valid_keys)
 
-        required_fields = ["date", "pet_id"]
+        required_fields = ["pet_id"]
         missed_fields: list[str] = check_missed_keys(data, required_fields)
         if missed_fields:
             raise MissingKeysError(required_fields, missed_fields)

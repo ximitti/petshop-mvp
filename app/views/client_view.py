@@ -87,9 +87,9 @@ def login() -> tuple:
 @jwt_required()
 def get_client_by_id(client_id: int) -> tuple:
     try:
-        is_admin(get_jwt())
-        check_authorization(client_id, get_jwt_identity())
-
+        if not check_authorization(client_id, get_jwt_identity()):
+            is_admin(get_jwt())
+            
         client: dict = ClientServices.get_client_by_id(client_id)
 
         return (
@@ -114,10 +114,10 @@ def get_client_by_id(client_id: int) -> tuple:
 @jwt_required()
 def update_client_by_id(client_id: int) -> tuple:
     try:
-        is_admin(get_jwt())
-        check_authorization(client_id, get_jwt_identity())
+        if not check_authorization(client_id, get_jwt_identity()):
+            is_admin(get_jwt())
 
-        client: dict = ClientServices.update_client(request.get_json())
+        client: dict = ClientServices.update_client(request.get_json(), client_id)
 
         return jsonify(data=client)
 

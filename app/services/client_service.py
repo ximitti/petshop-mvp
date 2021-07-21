@@ -68,9 +68,8 @@ class ClientServices:
 
         client_json = client.serialize
         client_json["addresses"] = [
-            address.serialize for address in client["addresses"]
+            address.serialize for address in client.addresses
         ]
-
         return client_json
 
     @staticmethod
@@ -85,7 +84,7 @@ class ClientServices:
         if not client:
             raise NotFoundError("Client not Found")
 
-        for key, value in data.values():
+        for key, value in data.items():
             if key == "password":
                 client.password = value
             else:
@@ -95,7 +94,7 @@ class ClientServices:
 
         client_json: dict = client.serialize
         client_json["addresses"] = [
-            address.serialize for address in client["addresses"]
+            address.serialize for address in client.addresses
         ]
 
         return client_json
