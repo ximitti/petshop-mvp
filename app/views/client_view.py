@@ -37,7 +37,7 @@ def create_client():
 def login():
     try:
         data = request.get_json()
-        return jsonify({"data":{"access":ClientServices.get_token(data)}}), HTTPStatus.OK
+        return jsonify({"data":{"access_token":ClientServices.get_token(data)}}), HTTPStatus.OK
     except InvalidKeysError as e:
         return jsonify(e.message), HTTPStatus.BAD_REQUEST
 
@@ -96,8 +96,13 @@ def create_address(id):
         current_user_id = get_jwt_identity()
         if current_user_id == id:
             return jsonify(ClientServices.create_address(id, data).serialize), HTTPStatus.CREATED
+        else:
+            raise Unauthorized
     except IntegrityError as _:
-            return {"error": "already exists"}, HTTPStatus.NOT_ACCEPTABLE  
+            return {"error": "already exists"}, HTTPStatus.NOT_ACCEPTABLE 
+    except Unauthorized as e:
+        return jsonify(e.message), HTTPStatus.UNAUTHORIZED
+
 
 @bp.get("/clients/<int:id>/address")
 @jwt_required()
@@ -106,10 +111,14 @@ def get_address(id):
         current_user_id = get_jwt_identity()
         if current_user_id == id:
             return jsonify({"data":ClientServices.get_addresses(id)}), HTTPStatus.OK
+        else:
+            raise Unauthorized
     except IntegrityError as _:
         return {"error": "already exists"}, HTTPStatus.NOT_ACCEPTABLE        
     except NotFoundError as e:
         return jsonify(e.message), HTTPStatus.NOT_FOUND
+    except Unauthorized as e:
+        return jsonify(e.message), HTTPStatus.UNAUTHORIZED
 
 @bp.patch("/clients/<int:id>/address/<int:add_id>")
 @jwt_required()
@@ -119,12 +128,16 @@ def update_address(id, add_id):
         data = request.get_json()
         if current_user_id == id:
             return jsonify(ClientServices.updade_address_by_id(data, add_id).serialize), HTTPStatus.OK
+        else:
+            raise Unauthorized
     except InvalidKeysError as e:
         return jsonify(e.message), HTTPStatus.BAD_REQUEST
     except IntegrityError as _:
         return {"error": "already exists"}, HTTPStatus.NOT_ACCEPTABLE
     except NotFoundError as e:
         return jsonify(e.message), HTTPStatus.NOT_FOUND
+    except Unauthorized as e:
+        return jsonify(e.message), HTTPStatus.UNAUTHORIZED
 
 @bp.delete("/clients/<int:id>/address/<int:add_id>")
 @jwt_required()
@@ -133,5 +146,9 @@ def delete_edit_address(id, add_id):
         current_user_id = get_jwt_identity()
         if current_user_id == id:
             return jsonify(ClientServices.delete_address_by_id(add_id)), HTTPStatus.NO_CONTENT
+        else:
+            raise Unauthorized
     except NotFoundError as e:
         return jsonify(e.message), HTTPStatus.NOT_FOUND
+    except Unauthorized as e:
+        return jsonify(e.message), HTTPStatus.UNAUTHORIZED
