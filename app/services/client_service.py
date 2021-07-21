@@ -6,6 +6,13 @@ from flask_jwt_extended import (
 )
 
 class ClientServices :
+    
+    def check_valid_keys(data, valid_keys, key):
+        
+        if key not in valid_keys:
+            raise InvalidKeysError(data, valid_keys)
+
+
     def get_clients():
         clients = ClientModel.query.order_by(ClientModel.name).all()
 
@@ -53,7 +60,6 @@ class ClientServices :
             raise NotFoundError("Client not Found")
         return client
 
-
     def update_client(data, id):
         valid_keys = ["name", "email", "password", "phone"]
         session = current_app.db.session
@@ -68,6 +74,8 @@ class ClientServices :
                 setattr(client, key, value)
         session.add(client)
         session.commit()
+        client = client.serialize
+        client["addresses"] = [address.serialize for address in client["addresses"]]
 
         return client
 
@@ -115,7 +123,5 @@ class ClientServices :
         session.commit()
         return ""
 
-
-    def check_valid_keys(data, valid_keys, key):
-        if key not in valid_keys:
-            raise InvalidKeysError(data, valid_keys)
+   
+    

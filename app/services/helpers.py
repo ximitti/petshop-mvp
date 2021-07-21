@@ -6,6 +6,8 @@ def is_admin(payload):
     if not payload.get("is_admin"):
         raise Unauthorized
 
+    return True
+
 
 def add_commit(model: db.Model):
 
