@@ -1,64 +1,67 @@
 from app.models.services_model import ServicesModel
-from app.exc.status_not_found import NotFoundError
-from app.exc.status_option import InvalidKeysError
-from http import HTTPStatus
-from flask import current_app
-from flask_jwt_extended import (
-    get_jwt_identity,
-)
 
-def check_valid_keys(data, valid_keys, key):
-    if key not in valid_keys:
-        raise InvalidKeysError(data, valid_keys)
+from app.exc import NotFoundError, InvalidKeysError, MissingKeysError
 
-def get_services():
-    services: ServicesModel =  ServicesModel.query.all()
-    return [service.serialize for service in services]
-
-def create_service(data):
-    valid_keys = ["name", "description", "price"]
-    for key, _ in data.items():
-        check_valid_keys(data, valid_keys, key)
-
-    session = current_app.db.session
-    service: ServicesModel = ServicesModel(**data)
-    session.add(service)
-    session.commit()
-    return service
-
-def get_service_by_id(service_id: int):
-    service: ServicesModel = ServicesModel.query.get(service_id)
-    if not service:
-        raise NotFoundError("Service not found")
-    return service
+from .helpers import add_commit, delete_commit, check_valid_keys, check_missed_keys
 
 
-def update_service(data, service_id: int):
-    service = get_service_by_id(service_id)
-    session = current_app.db.session
-    valid_keys = ["name", "description", "price"]
-    for key, value in data.items():
-        check_valid_keys(data, valid_keys, key)
+class ServiceServices:
+    @staticmethod
+    def get_services() -> list[dict]:
+        services: ServicesModel = ServicesModel.query.all()
 
-        setattr(service, key, value)
+        return [service.serialize for service in services]
 
-    session.add(service)
-    session.commit()
+    @staticmethod
+    def create_service(data) -> dict:
+        valid_keys = ["name", "description", "price"]
 
-    if not service:
-            raise NotFoundError("Service not found")
-    return service
+        if check_valid_keys(data, valid_keys):
+            raise InvalidKeysError(data, valid_keys)
 
-def delete_service(service_id: int):
-    session = current_app.db.session
-    service = ServicesModel.query.get(service_id)    
-    if not service:
+        required_fields = ["name", "description", "price"]
+        missed_fields: list[str] = check_missed_keys(data, required_fields)
+        if missed_fields:
+            raise MissingKeysError(required_fields, missed_fields)
+
+        service: ServicesModel = ServicesModel(**data)
+        add_commit(service)
+
+        return service.serialize
+
+    @staticmethod
+    def get_service_by_id(service_id: int) -> dict:
+        service: ServicesModel = ServicesModel.query.get(service_id)
+
+        if not service:
             raise NotFoundError("Service not found")
 
-    service: ServicesModel = ServicesModel.query.get(service_id)
-    
-    session.delete(service)
-    session.commit()
+        return service.serialize
 
-    return ""
+    @staticmethod
+    def update_service(data, service_id: int) -> dict:
+        valid_keys = ["name", "description", "price"]
 
+        if check_valid_keys(data, valid_keys):
+            raise InvalidKeysError(data, valid_keys)
+
+        service: ServicesModel = ServicesModel.query.get(service_id)
+
+        if not service:
+            raise NotFoundError("Service not found")
+
+        for key, value in data.items():
+            setattr(service, key, value)
+
+        add_commit(service)
+
+        return service.serialize
+
+    @staticmethod
+    def delete_service(service_id: int) -> None:
+        service: ServicesModel = ServicesModel.query.get(service_id)
+
+        if not service:
+            raise NotFoundError("Service not found")
+
+        delete_commit(service)

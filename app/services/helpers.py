@@ -26,3 +26,14 @@ def check_valid_keys(data, valid_keys):
     for key in data.keys():
         if key not in valid_keys:
             return True
+
+
+def check_missed_keys(data, required_fields):
+    received_keys = data.keys()
+
+    return [field for field in required_fields if field not in received_keys]
+
+
+def check_authorization(id: int, token_id: int) -> bool:
+    if token_id != id:
+        raise Unauthorized

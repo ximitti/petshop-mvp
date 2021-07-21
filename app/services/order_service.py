@@ -1,52 +1,101 @@
 from app.models import OrderModel, OrderServicesModel, ServicesModel
 
-
-from app.exc import InvalidKeysError
-from app.services.helpers import add_commit, delete_commit, check_valid_keys
-
-
-def create_order(data: dict) -> OrderModel:
-    valid_keys = ["date", "finished_date", "pet_delivery", "pet_id"]
-
-    if check_valid_keys(data, valid_keys):
-        raise InvalidKeysError(data, valid_keys)
-
-    order: OrderModel = OrderModel(**data)
-
-    add_commit(order)
-
-    return order
+from app.exc import InvalidKeysError, NotFoundError, MissingKeysError
+from app.services.helpers import (
+    add_commit,
+    delete_commit,
+    check_valid_keys,
+    check_missed_keys,
+)
 
 
-def update_order_by_id(id: int, data: dict) -> dict:
-    valid_keys = ["finished_date", "pet_delivery"]
+class OrderServices:
+    @staticmethod
+    def create_order(data: dict) -> OrderModel:
+        valid_keys = ["date", "finished_date", "pet_delivery", "pet_id"]
 
-    if check_valid_keys(data, valid_keys):
-        raise InvalidKeysError(data, valid_keys)
+        if check_valid_keys(data, valid_keys):
+            raise InvalidKeysError(data, valid_keys)
 
-    order: OrderModel = OrderModel.query.get(id)
+        required_fields = ["date", "pet_id"]
+        missed_fields: list[str] = check_missed_keys(data, required_fields)
+        if missed_fields:
+            raise MissingKeysError(required_fields, missed_fields)
 
-    for key, value in data.items():
-        setattr(order, key, value)
+        order: OrderModel = OrderModel(**data)
 
-    add_commit(order)
+        add_commit(order)
 
-    return order.serialize
+        return order
 
+    @staticmethod
+    def update_order_by_id(id: int, data: dict) -> dict:
+        valid_keys = ["finished_date", "pet_delivery"]
 
-def delete_order_by_id(id: int) -> None:
+        if check_valid_keys(data, valid_keys):
+            raise InvalidKeysError(data, valid_keys)
 
-    order: OrderModel = OrderModel.query.get(id)
+        order: OrderModel = OrderModel.query.get(id)
+        if not order:
+            raise NotFoundError("Order not found")
 
-    delete_commit(order)
+        for key, value in data.items():
+            setattr(order, key, value)
 
+        add_commit(order)
 
-def get_all_orders() -> list[dict]:
-    output: list = []
+        return order.serialize
 
-    orders: OrderModel = OrderModel.query.all()
+    @staticmethod
+    def delete_order_by_id(id: int) -> None:
 
-    for order in orders:
+        order: OrderModel = OrderModel.query.get(id)
+        if not order:
+            raise NotFoundError("Order not found")
+
+        delete_commit(order)
+
+    @staticmethod
+    def get_all_orders() -> list[dict]:
+        orders_json: list[dict] = []
+
+        orders: OrderModel = OrderModel.query.all()
+
+        for order in orders:
+
+            query = (
+                OrderModel.query.from_self(
+                    ServicesModel.id,
+                    ServicesModel.name,
+                    ServicesModel.description,
+                    ServicesModel.price,
+                )
+                .join(OrderServicesModel)
+                .join(ServicesModel)
+                .filter(OrderModel.id == order.id)
+                .all()
+            )
+
+            order_json = order.serialize
+            order_json["services"] = [
+                {
+                    "id": item[0],
+                    "name": item[1],
+                    "description": item[2],
+                    "price": item[3],
+                }
+                for item in query
+            ]
+
+            orders_json.append(order_json)
+
+        return orders_json
+
+    @staticmethod
+    def get_order_by_id(id: int) -> dict:
+        order: OrderModel = OrderModel.query.get(id)
+        if not order:
+            raise NotFoundError("Order not found")
 
         query = (
             OrderModel.query.from_self(
@@ -67,31 +116,4 @@ def get_all_orders() -> list[dict]:
             for item in query
         ]
 
-        output.append(order_json)
-
-    return output
-
-
-def get_order_by_id(id: int) -> dict:
-    order: OrderModel = OrderModel.query.get(id)
-
-    query = (
-        OrderModel.query.from_self(
-            ServicesModel.id,
-            ServicesModel.name,
-            ServicesModel.description,
-            ServicesModel.price,
-        )
-        .join(OrderServicesModel)
-        .join(ServicesModel)
-        .filter(OrderModel.id == order.id)
-        .all()
-    )
-
-    order_json = order.serialize
-    order_json["services"] = [
-        {"id": item[0], "name": item[1], "description": item[2], "price": item[3]}
-        for item in query
-    ]
-
-    return order_json
+        return order_json

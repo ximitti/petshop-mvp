@@ -1,18 +1,12 @@
-from flask import Blueprint, current_app, request, jsonify
+from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from http import HTTPStatus
 
-from app.models import OrderModel, OrderServicesModel, ServicesModel
+from app.models import OrderModel
 
-from app.exc import InvalidKeysError
-from app.services import (
-    create_order,
-    get_all_orders,
-    get_order_by_id,
-    update_order_by_id,
-    delete_order_by_id,
-)
-from app.services.helpers import add_commit, delete_commit
+from app.exc import InvalidKeysError, NotFoundError, MissingKeysError
+
+from app.services import OrderServices
 
 
 bp = Blueprint("bp_order", __name__, url_prefix="/api")
@@ -23,7 +17,7 @@ bp = Blueprint("bp_order", __name__, url_prefix="/api")
 def register() -> tuple:
 
     try:
-        order: OrderModel = create_order(request.get_json())
+        order: OrderModel = OrderServices.create_order(request.get_json())
 
         return (
             jsonify(order=order.serialize),
@@ -36,12 +30,18 @@ def register() -> tuple:
             HTTPStatus.BAD_REQUEST,
         )
 
+    except MissingKeysError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.BAD_REQUEST,
+        )
+
 
 @bp.get("/orders/")
 @jwt_required()
 def get() -> tuple:
 
-    orders: list[dict] = get_all_orders()
+    orders: list[dict] = OrderServices.get_all_orders()
 
     return (
         jsonify(orders=orders),
@@ -53,12 +53,19 @@ def get() -> tuple:
 @jwt_required()
 def get_by_id(order_id: int) -> tuple:
 
-    order_json: dict = get_order_by_id(order_id)
+    try:
+        order_json: dict = OrderServices.get_order_by_id(order_id)
 
-    return (
-        jsonify(order=order_json),
-        HTTPStatus.OK,
-    )
+        return (
+            jsonify(order=order_json),
+            HTTPStatus.OK,
+        )
+
+    except NotFoundError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
 
 
 @bp.patch("/orders/<int:order_id>")
@@ -67,7 +74,7 @@ def update(order_id: int) -> tuple:
 
     try:
 
-        order_json: dict = update_order_by_id(request.get_json())
+        order_json: dict = OrderServices.update_order_by_id(request.get_json())
 
         return (
             jsonify(order=order_json),
@@ -80,14 +87,27 @@ def update(order_id: int) -> tuple:
             HTTPStatus.BAD_REQUEST,
         )
 
+    except NotFoundError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
+
 
 @bp.delete("/orders/<int:order_id>")
 @jwt_required()
 def delete(order_id: int) -> tuple:
 
-    delete_order_by_id(order_id)
+    try:
+        OrderServices.delete_order_by_id(order_id)
 
-    return (
-        "",
-        HTTPStatus.NO_CONTENT,
-    )
+        return (
+            "",
+            HTTPStatus.NO_CONTENT,
+        )
+
+    except NotFoundError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )

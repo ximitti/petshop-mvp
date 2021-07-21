@@ -1,99 +1,167 @@
-from app.exc.status_unauthorized import Unauthorized
-from app.services.pet_service import delete_pet, get_pet_orders, update_pet
-from app.exc.status_option import InvalidKeysError
-from app.exc.status_not_found import NotFoundError
-from app.models.pet_model import PetModel
-from app.models.order_model import OrderModel
-from flask import Blueprint, jsonify, current_app, request
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required, get_jwt
 from http import HTTPStatus
 
-from app.services import create_pet, get_pets, get_pet_by_id
+from app.exc import Unauthorized, InvalidKeysError, NotFoundError, MissingKeysError
+
+from app.services import PetServices
+from app.services.helpers import is_admin, check_authorization
+
 
 bp = Blueprint("bp_pet", __name__, url_prefix="/api")
 
 
 @bp.post("/pets/")
 @jwt_required()
-def create():
+def create() -> tuple:
     try:
+
         data = request.get_json()
-        pet_owner_id = get_jwt_identity()
-        client_id = data["client_id"]
-        if client_id == pet_owner_id:
-            pet = create_pet(client_id, pet_owner_id, data)
-            return jsonify(data=pet.serialize), HTTPStatus.CREATED
-        else:
-            raise Unauthorized
+        check_authorization(data.get("client_id"), get_jwt_identity())
+
+        pet: dict = PetServices.create_pet(data)
+
+        return (
+            jsonify(data=pet),
+            HTTPStatus.CREATED,
+        )
 
     except InvalidKeysError as e:
-        return jsonify(e.message), HTTPStatus.BAD_REQUEST
+        return (
+            jsonify(e.message),
+            HTTPStatus.BAD_REQUEST,
+        )
+
     except Unauthorized as e:
-        return jsonify(e.message), HTTPStatus.UNAUTHORIZED
+        return (
+            jsonify(e.message),
+            HTTPStatus.UNAUTHORIZED,
+        )
+
+    except MissingKeysError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.BAD_REQUEST,
+        )
 
 
 @bp.get("/pets/")
 @jwt_required()
-def retrieve_all():
-    try:
-        client_id = request.args.get("client_id")
-        pets = get_pets(client_id)
-        return jsonify(data=pets), HTTPStatus.OK
-    except NotFoundError as e:
-        return jsonify(e.message), HTTPStatus.NOT_FOUND
+def retrieve_all() -> tuple:
+    client_id = request.args.get("client_id")
+    pets: list[dict] = PetServices.get_pets(client_id)
+
+    return (
+        jsonify(data=pets),
+        HTTPStatus.OK,
+    )
 
 
 @bp.get("/pets/<int:pet_id>")
 @jwt_required()
-def retrieve_by_id(pet_id: int):
+def retrieve_by_id(pet_id: int) -> tuple:
     try:
-        pet = get_pet_by_id(pet_id)
-        return jsonify(data=pet.serialize), HTTPStatus.OK
+        pet: dict = PetServices.get_pet_by_id(pet_id)
+
+        return (
+            jsonify(data=pet),
+            HTTPStatus.OK,
+        )
+
     except NotFoundError as e:
-        return jsonify(e.message), HTTPStatus.NOT_FOUND
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
 
 
 @bp.patch("/pets/<int:pet_id>")
 @jwt_required()
-def update(pet_id: int):
+def update(pet_id: int) -> tuple:
     try:
-        current_user_id = get_jwt_identity()
-        data = request.get_json()
-        pet = update_pet(data, pet_id, current_user_id)
-        return jsonify(data=pet.serialize), HTTPStatus.OK
+        is_admin(get_jwt())
+
+        pet_to_get_owner: dict = PetServices.get_pet_by_id(pet_id)
+        check_authorization(pet_to_get_owner.get("client_id"), get_jwt_identity())
+
+        pet: dict = PetServices.update_pet(request.get_json(), pet_id)
+
+        return (
+            jsonify(data=pet),
+            HTTPStatus.OK,
+        )
+
     except NotFoundError as e:
-        return jsonify(e.message), HTTPStatus.NOT_FOUND
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
+
     except InvalidKeysError as e:
-        return jsonify(e.message), HTTPStatus.BAD_REQUEST
+        return (
+            jsonify(e.message),
+            HTTPStatus.BAD_REQUEST,
+        )
+
     except Unauthorized as e:
-        return jsonify(e.message), HTTPStatus.UNAUTHORIZED
+        return (
+            jsonify(e.message),
+            HTTPStatus.UNAUTHORIZED,
+        )
 
 
 @bp.delete("/pets/<int:pet_id>")
 @jwt_required()
-def delete(pet_id: int):
+def delete(pet_id: int) -> tuple:
     try:
-        current_user_id = get_jwt_identity()
-        delete_pet(pet_id, current_user_id)
-        return "", HTTPStatus.NO_CONTENT
+        is_admin(get_jwt())
+
+        pet_to_get_owner: dict = PetServices.get_pet_by_id(pet_id)
+        check_authorization(pet_to_get_owner.get("client_id"), get_jwt_identity())
+
+        PetServices.delete_pet(pet_id)
+        return (
+            "",
+            HTTPStatus.NO_CONTENT,
+        )
+
     except NotFoundError as e:
-        return jsonify(e.message), HTTPStatus.NOT_FOUND
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
+
     except Unauthorized as e:
-        return jsonify(e.message), HTTPStatus.UNAUTHORIZED
+        return (
+            jsonify(e.message),
+            HTTPStatus.UNAUTHORIZED,
+        )
 
 
 @bp.get("/pets/<int:pet_id>/orders")
 @jwt_required()
-def get_orders_by_pet(pet_id: int):
+def get_orders_by_pet(pet_id: int) -> tuple:
     try:
-        pet_owner_id = get_jwt_identity()
-        pet = get_pet_by_id(pet_id)
-        if pet.client_id == pet_owner_id:
-            orders = get_pet_orders(pet_id)
-            return jsonify(data=orders), HTTPStatus.OK
-        else:
-            raise Unauthorized
+
+        pet: dict = PetServices.get_pet_by_id(pet_id)
+
+        check_authorization(pet.get("client_id"), get_jwt_identity())
+
+        orders: list[dict] = PetServices.get_pet_orders(pet_id)
+
+        return (
+            jsonify(data=orders),
+            HTTPStatus.OK,
+        )
+
     except NotFoundError as e:
-        return jsonify(e.message), HTTPStatus.NOT_FOUND
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
+
     except Unauthorized as e:
-        return jsonify(e.message), HTTPStatus.UNAUTHORIZED
+        return (
+            jsonify(e.message),
+            HTTPStatus.UNAUTHORIZED,
+        )

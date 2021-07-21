@@ -1,33 +1,13 @@
 from app.configs.database import db
 
-from app.services.petshop_service import (
-    create_petshop,
-    get_admin_token,
-    update_petshop,
-    delete_petshop,
-    get_petshop,
-    get_petshop_by_id,
-)
+from .petshop_service import PetShopServices
 
-from app.services.client_service import ClientServices
+from .client_service import ClientServices
 
-from app.services.services_service import *
+from .pet_service import PetServices
 
-from app.services.pet_service import (
-    create_pet,
-    get_pets,
-    get_pet_by_id,
-    get_pet_orders,
-    update_pet,
-    delete_pet,
-)
+from .order_service import OrderServices
 
-from .order_service import (
-    create_order,
-    get_all_orders,
-    get_order_by_id,
-    update_order_by_id,
-    delete_order_by_id,
-)
+from .services_service import ServiceServices
 
-from app.services.pet_service import *
+from .order_service_service import OrderServiceServices

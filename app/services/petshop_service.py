@@ -1,95 +1,101 @@
-from app.exc.status_unauthorized import Unauthorized
-from flask import current_app
-from app.exc import InvalidKeysError, NotFoundError
+from flask_jwt_extended import create_access_token
+
+
 from app.models import PetshopModel
-from flask_jwt_extended import (
-    create_access_token,
-    get_jwt_identity,
-)
-import ipdb
+
+from .helpers import add_commit, delete_commit, check_valid_keys, check_missed_keys
+
+from app.exc import InvalidKeysError, NotFoundError, Unauthorized, MissingKeysError
 
 
-def create_petshop(data):
-    valid_keys = ["name", "email", "password", "is_admin"]
-    for key, _ in data.items():
-        check_valid_keys(data, valid_keys, key)
+class PetShopServices:
+    @staticmethod
+    def create_petshop(data):
+        valid_keys = ["name", "email", "password", "is_admin"]
 
-    session = current_app.db.session
-    pet_shop = PetshopModel(**data)
-    session.add(pet_shop)
-    session.commit()
-    return pet_shop
+        if check_valid_keys(data, valid_keys):
+            raise InvalidKeysError(data, valid_keys)
 
+        required_fields = ["name", "email", "password"]
+        missed_fields: list[str] = check_missed_keys(data, required_fields)
+        if missed_fields:
+            raise MissingKeysError(required_fields, missed_fields)
 
-def get_petshop():
-    return PetshopModel.query.all()
+        pet_shop: PetshopModel = PetshopModel(**data)
+        add_commit(pet_shop)
 
+        return pet_shop.serialize
 
-def get_petshop_by_id(id):
-    pet_shop = PetshopModel.query.get(id)
-    if not pet_shop:
-        raise NotFoundError("Petshop not found")
-    return pet_shop
+    @staticmethod
+    def get_petshop():
 
+        petshops: list[PetshopModel] = PetshopModel.query.all()
 
-def get_admin_token(data):
-    valid_keys = ["email", "password"]
+        return [petshop.serialize for petshop in petshops]
 
-    for key, _ in data.items():
-        check_valid_keys(data, valid_keys, key)
+    @staticmethod
+    def get_petshop_by_id(id):
+        pet_shop: PetshopModel = PetshopModel.query.get(id)
+        if not pet_shop:
+            raise NotFoundError("Petshop not found")
 
-    user = PetshopModel.query.filter_by(email=data["email"]).first()
+        return pet_shop.serialize
 
-    if not user or not user.check_password(data["password"]):
-        raise NotFoundError("Bad username or password")
+    @staticmethod
+    def get_admin_token(data):
+        valid_keys = ["email", "password"]
 
-    return create_access_token(
-        identity=data["email"], additional_claims={"is_admin": user.is_admin}
-    )
+        if check_valid_keys(data, valid_keys):
+            raise InvalidKeysError(data, valid_keys)
 
+        required_fields = ["email", "password"]
+        missed_fields: list[str] = check_missed_keys(data, required_fields)
+        if missed_fields:
+            raise MissingKeysError(required_fields, missed_fields)
 
-def update_petshop(data, email):
-    valid_keys = ["name", "email", "password", "is_admin"]
-    session = current_app.db.session
-    pet_shop = PetshopModel.query.filter_by(email=email).first()
+        user: PetshopModel = PetshopModel.query.filter_by(email=data["email"]).first()
 
-    for key, value in data.items():
+        if not user or not user.check_password(data["password"]):
+            raise NotFoundError("Bad username or password")
 
-        check_valid_keys(data, valid_keys, key)
+        return create_access_token(
+            identity=data["email"], additional_claims={"is_admin": user.is_admin}
+        )
 
-        if key == "password":
-            pet_shop.password = value
-        else:
-            setattr(pet_shop, key, value)
+    @staticmethod
+    def update_petshop(data, email):
+        valid_keys = ["name", "email", "password", "is_admin"]
 
-    session.add(pet_shop)
-    session.commit()
+        if check_valid_keys(data, valid_keys):
+            raise InvalidKeysError(data, valid_keys)
 
-    return pet_shop
+        pet_shop: PetshopModel = PetshopModel.query.filter_by(email=email).first()
 
+        for key, value in data.items():
 
-def check_valid_keys(data, valid_keys, key):
-    if key not in valid_keys:
-        raise InvalidKeysError(data, valid_keys)
+            if key == "password":
+                pet_shop.password = value
+            else:
+                setattr(pet_shop, key, value)
 
+        add_commit(pet_shop)
 
-def delete_petshop(id):
-    session = current_app.db.session
-    email = get_jwt_identity()
+        return pet_shop.serialize
 
-    pet_shop = PetshopModel.query.filter_by(email=email).first()
-    pet_shop_to_be_deleted = PetshopModel.query.get(id)
+    @staticmethod
+    def delete_petshop(id, email) -> None:
 
-    if not pet_shop_to_be_deleted:
-        raise NotFoundError("User Petshop not found")
+        petshop: PetshopModel = PetshopModel.query.filter_by(email=email).first()
 
-    if pet_shop.id == pet_shop_to_be_deleted.id:
-        raise Unauthorized("You can't delete your own user")
+        if petshop.id == id:
+            raise Unauthorized("You can't delete your own user")
 
-    if pet_shop_to_be_deleted.is_admin:
-        raise Unauthorized("You can't delete admin users")
+        petshop_to_delete: PetshopModel = PetshopModel.query.get(id)
 
-    session.delete(pet_shop_to_be_deleted)
-    session.commit()
+        if not petshop_to_delete:
+            raise NotFoundError("User Petshop not found")
 
-    return ""
+        if petshop_to_delete.is_admin:
+            raise Unauthorized("You can't delete admin users")
+
+        delete_commit(petshop_to_delete)
