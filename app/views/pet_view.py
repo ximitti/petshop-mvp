@@ -2,7 +2,13 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required, get_jwt
 from http import HTTPStatus
 
-from app.exc import Unauthorized, InvalidKeysError, NotFoundError, MissingKeysError
+from app.exc import (
+    Unauthorized,
+    InvalidKeysError,
+    NotFoundError,
+    MissingKeysError,
+    PetExistsError,
+)
 
 from app.services import PetServices
 from app.services.helpers import is_admin, check_authorization
@@ -44,6 +50,12 @@ def create() -> tuple:
             HTTPStatus.BAD_REQUEST,
         )
 
+    except PetExistsError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.BAD_REQUEST,
+        )
+
 
 @bp.get("/pets/")
 @jwt_required()
@@ -80,7 +92,9 @@ def retrieve_by_id(pet_id: int) -> tuple:
 def update(pet_id: int) -> tuple:
     try:
         pet_to_get_owner: dict = PetServices.get_pet_by_id(pet_id)
-        if not check_authorization(pet_to_get_owner.get("client_id"), get_jwt_identity()):
+        if not check_authorization(
+            pet_to_get_owner.get("client_id"), get_jwt_identity()
+        ):
             is_admin(get_jwt())
         pet: dict = PetServices.update_pet(request.get_json(), pet_id)
 
@@ -113,7 +127,9 @@ def update(pet_id: int) -> tuple:
 def delete(pet_id: int) -> tuple:
     try:
         pet_to_get_owner: dict = PetServices.get_pet_by_id(pet_id)
-        if not check_authorization(pet_to_get_owner.get("client_id"), get_jwt_identity()):
+        if not check_authorization(
+            pet_to_get_owner.get("client_id"), get_jwt_identity()
+        ):
             is_admin(get_jwt())
 
         PetServices.delete_pet(pet_id)

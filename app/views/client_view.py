@@ -82,6 +82,12 @@ def login() -> tuple:
             HTTPStatus.BAD_REQUEST,
         )
 
+    except NotFoundError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
+
 
 @bp.get("/clients/<int:client_id>")
 @jwt_required()
@@ -89,7 +95,7 @@ def get_client_by_id(client_id: int) -> tuple:
     try:
         if not check_authorization(client_id, get_jwt_identity()):
             is_admin(get_jwt())
-            
+
         client: dict = ClientServices.get_client_by_id(client_id)
 
         return (
@@ -144,8 +150,9 @@ def update_client_by_id(client_id: int) -> tuple:
 @jwt_required()
 def delete_client_by_id(client_id: int) -> tuple:
     try:
-        is_admin(get_jwt())
-        check_authorization(client_id, get_jwt_identity())
+        if not check_authorization(client_id, get_jwt_identity()):
+
+            is_admin(get_jwt())
 
         ClientServices.delete_client(client_id)
 

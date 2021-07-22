@@ -1,9 +1,13 @@
-from sqlalchemy.exc import IntegrityError
-from app.exc import InvalidKeysError, NotFoundError, MissingKeysError
+from app.exc import InvalidKeysError, NotFoundError, MissingKeysError, PetExistsError
 
 from app.models import OrderModel, PetModel
 
-from .helpers import add_commit, delete_commit, check_valid_keys, check_missed_keys, is_admin
+from .helpers import (
+    add_commit,
+    delete_commit,
+    check_valid_keys,
+    check_missed_keys,
+)
 
 
 class PetServices:
@@ -40,7 +44,7 @@ class PetServices:
 
         for pet in pets:
             if pet.name == data.get("name"):
-                raise IntegrityError()
+                raise PetExistsError("Pet already exists")
 
         pet: PetModel = PetModel(**data)
 

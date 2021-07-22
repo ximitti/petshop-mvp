@@ -36,6 +36,12 @@ def register() -> tuple:
             HTTPStatus.BAD_REQUEST,
         )
 
+    except NotFoundError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
+
 
 @bp.get("/orders/")
 @jwt_required()

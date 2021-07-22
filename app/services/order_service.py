@@ -1,4 +1,4 @@
-from app.models import OrderModel, OrderServicesModel, ServicesModel
+from app.models import OrderModel, OrderServicesModel, ServicesModel, PetModel
 
 from app.exc import InvalidKeysError, NotFoundError, MissingKeysError
 from app.services.helpers import (
@@ -21,6 +21,10 @@ class OrderServices:
         missed_fields: list[str] = check_missed_keys(data, required_fields)
         if missed_fields:
             raise MissingKeysError(required_fields, missed_fields)
+
+        pet: PetModel = PetModel.query.get(data.get("pet_id"))
+        if not pet:
+            raise NotFoundError("Pet not found")
 
         order: OrderModel = OrderModel(**data)
 
