@@ -1,0 +1,18 @@
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
+
+
+def init_app(app):
+    db.init_app(app)
+    app.db = db
+
+    from app.models import (
+        AddressModel,
+        ClientModel,
+        OrderModel,
+        OrderServicesModel,
+        PetModel,
+        PetshopModel,
+        ServicesModel,
+    )
