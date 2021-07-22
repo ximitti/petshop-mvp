@@ -1,106 +1,137 @@
-from app.models.services_model import ServicesModel
-from flask import Blueprint, json, jsonify, current_app, request
-from flask_jwt_extended import (
-    get_jwt_identity,
-    jwt_required,
-)
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required, get_jwt
+from http import HTTPStatus
 
-bp = Blueprint("bp_service", __name__, url_prefix="/api")
+from app.services.helpers import is_admin
+from app.services import ServiceServices
+
+from app.exc import InvalidKeysError, NotFoundError, Unauthorized, MissingKeysError
+
+
+bp = Blueprint("bp", __name__, url_prefix="/api")
 
 
 @bp.get("/services/")
-def get_services():
-    try:
+def get() -> tuple:
+    services: list[dict] = ServiceServices.get_services()
 
-        services = ServicesModel.query.order_by(ServicesModel.name).all()
-        services = [service.serialize for service in services]
-
-        return jsonify(services)
-
-    except:
-        ...
+    return (
+        jsonify(data=services),
+        HTTPStatus.OK,
+    )
 
 
 @bp.post("/services/")
 @jwt_required()
-def register():
-    session = current_app.db.session
+def create() -> tuple:
     try:
-        data = request.get_json()
+        is_admin(get_jwt())
 
-        service = ServicesModel(**data)
+        service: dict = ServiceServices.create_service(request.get_json())
 
-        session.add(service)
-        session.commit()
+        return (
+            jsonify(data=service),
+            HTTPStatus.CREATED,
+        )
 
-        return {"message": "service created"}, 201
+    except InvalidKeysError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.BAD_REQUEST,
+        )
 
-    except:
-        ...
+    except Unauthorized as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.UNAUTHORIZED,
+        )
+
+    except MissingKeysError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.BAD_REQUEST,
+        )
 
 
-@bp.get("/services/<int:id>")
+@bp.get("/services/<int:service_id>")
 @jwt_required()
-def get_service_by_id(id):
-    current_service_id = get_jwt_identity()
+def retrieve_by_id(service_id: int) -> tuple:
     try:
-        service = ServicesModel.query.get(id)
+        is_admin(get_jwt())
 
-        return jsonify(service.serialize)
-    except:
-        return {"message": "Not Found"}, 404
+        service: dict = ServiceServices.get_service_by_id(service_id)
 
-    return {"message": "unauthorized"}
+        return (
+            jsonify(data=service),
+            HTTPStatus.OK,
+        )
 
+    except NotFoundError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
 
-# @bp.post("/<int:id>")
-# @jwt_required()
-# def create_service_by_id():
-#     session = current_app.db.session
-#     try:
-#         data = request.get_json()
-
-#         service = ServicesModel(**data)
-
-#         session.add(service)
-#         session.commit()
-
-#         return {"message":"service created"}, 201
-
-#     except:
-#         ...
+    except Unauthorized as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.UNAUTHORIZED,
+        )
 
 
-@bp.patch("/services/<int:id>")
+@bp.patch("/services/<int:service_id>")
 @jwt_required()
-def update_service_by_id(id):
-    session = current_app.db.session
-    current_service_id = get_jwt_identity()
-    data = request.get_json()
-    if current_service_id == id:
-        try:
-            service = ServicesModel.query.get(current_service_id)
-            service.name = data["name"]
-            session.commit()
-            return jsonify(service.serialize)
-        except KeyError:
-            return {"message": "avaiable keys : name"}, 404
-        except:
-            return {"messege": "Not Found"}
-    return {"message": "unauthorized"}
+def update_service_by_id(service_id: int) -> tuple:
+    try:
+        is_admin(get_jwt())
+
+        service: dict = ServiceServices.update_service(request.get_json(), service_id)
+
+        return (
+            jsonify(data=service),
+            HTTPStatus.OK,
+        )
+
+    except InvalidKeysError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.BAD_REQUEST,
+        )
+
+    except Unauthorized as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.UNAUTHORIZED,
+        )
+
+    except NotFoundError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
 
 
-@bp.delete("/services/<int:id>")
+@bp.delete("/services/<int:service_id>")
 @jwt_required()
-def delete_service_by_id(id):
-    current_service_id = get_jwt_identity()
-    session = current_app.db.session
-    if current_service_id == id:
-        try:
-            service = ServicesModel.query.get(current_service_id)
-            session.delete(service)
-            session.commit()
-            return {"message": "deleted"}, 404
-        except:
-            return {"message": "Not Found"}, 404
-    return {"message": "unauthorized"}
+def delete_service_by_id(service_id: int) -> tuple:
+    try:
+        is_admin(get_jwt())
+
+        ServiceServices.delete_service(service_id),
+
+        return (
+            "",
+            HTTPStatus.NO_CONTENT,
+        )
+
+    except NotFoundError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
+
+    except Unauthorized as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.UNAUTHORIZED,
+        )

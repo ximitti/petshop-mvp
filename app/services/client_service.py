@@ -1,88 +1,171 @@
-from flask import current_app, jsonify
-from http import HTTPStatus
-from sqlalchemy.exc import IntegrityError
-from app.exc import InvalidKeysError, NotFoundError
-from app.models import ClientModel, PetshopModel
-from flask_jwt_extended import (
-    create_access_token,
-    get_jwt_identity,
-)
+from flask_jwt_extended import create_access_token
+
+from app.models import ClientModel, AddressModel
+
+from .helpers import add_commit, delete_commit, check_valid_keys, check_missed_keys
+
+from app.exc import InvalidKeysError, NotFoundError, MissingKeysError
 
 
-def get_clients():
-    client = ClientModel.query.all()
-    return jsonify(client), HTTPStatus.OK
+class ClientServices:
+    @staticmethod
+    def get_clients() -> list[dict]:
+        clients: list[ClientModel] = ClientModel.query.order_by(ClientModel.name).all()
 
+        clients = [client.serialize for client in clients]
 
-def create_client(data):
-    valid_keys = ["name", "email", "password", "phone", "address"]
-    for key, _ in data.items():
-        check_valid_keys(data, valid_keys, key)
-    try:
-        session = current_app.db.session
+        for client in clients:
+            client["addresses"] = [address.serialize for address in client["addresses"]]
+
+        return clients
+
+    @staticmethod
+    def create_client(data: dict) -> dict:
+        valid_keys = ["name", "email", "password", "phone", "address"]
+
+        if check_valid_keys(data, valid_keys):
+            raise InvalidKeysError(data, valid_keys)
+
+        required_fields = ["name", "email", "password"]
+        missed_fields: list[str] = check_missed_keys(data, required_fields)
+        if missed_fields:
+            raise MissingKeysError(required_fields, missed_fields)
+
         password_to_hash = data.pop("password")
-        client = ClientModel(**data)
+        client: ClientModel = ClientModel(**data)
         client.password = password_to_hash
-        session.add(client)
-        session.commit()
 
-        return {"message": "user created"}, HTTPStatus.CREATED
+        add_commit(client)
 
-    except IntegrityError as _:
-        return {"error": "Petshop already exists"}, HTTPStatus.NOT_ACCEPTABLE
+        return client.serialize
 
+    @staticmethod
+    def get_token(data: dict) -> str:
+        valid_keys = ["email", "password"]
 
-def get_token(data):
-    valid_keys = ["email", "password"]
+        if check_valid_keys(data, valid_keys):
+            raise InvalidKeysError(data, valid_keys)
 
-    for key, _ in data.items():
-        check_valid_keys(data, valid_keys, key)
+        required_fields = ["email", "password"]
+        missed_fields: list[str] = check_missed_keys(data, required_fields)
+        if missed_fields:
+            raise MissingKeysError(required_fields, missed_fields)
 
-    user = PetshopModel.query.filter_by(email=data["email"]).first()
+        client: ClientModel = ClientModel.query.filter_by(email=data["email"]).first()
 
-    if not user or not user.check_password(data["password"]):
-        raise NotFoundError("Bad username or password")
+        if not client or not client.check_password(data["password"]):
+            raise NotFoundError("Bad username or password")
 
-    return create_access_token(identity=data["email"])
+        return create_access_token(identity=client.id)
 
+    @staticmethod
+    def get_client_by_id(id) -> dict:
 
-def get_client_by_id(id):
-    client = ClientModel.query.get(id)
-    if not client:
-        return {"error": "Not Found"}, HTTPStatus.NOT_FOUND
-    return jsonify(client), HTTPStatus.OK
+        client: ClientModel = ClientModel.query.get(id)
 
+        if not client:
+            raise NotFoundError("Client not Found")
 
-def update_client(data, id):
-    valid_keys = ["name", "email", "password", "phone"]
-    session = current_app.db.session
-    client = ClientModel.query.get(id)
+        client_json = client.serialize
+        client_json["addresses"] = [
+            address.serialize for address in client.addresses
+        ]
+        return client_json
 
-    for key, value in data.items():
+    @staticmethod
+    def update_client(data, id) -> dict:
+        valid_keys = ["name", "email", "password", "phone"]
 
-        check_valid_keys(data, valid_keys, key)
+        if check_valid_keys(data, valid_keys):
+            raise InvalidKeysError(data, valid_keys)
 
-        if key == "password":
-            client.password = value
-        else:
-            setattr(client, key, value)
+        client: ClientModel = ClientModel.query.get(id)
 
-    session.add(client)
-    session.commit()
+        if not client:
+            raise NotFoundError("Client not Found")
 
-    return jsonify(client), HTTPStatus.OK
+        for key, value in data.items():
+            if key == "password":
+                client.password = value
+            else:
+                setattr(client, key, value)
 
+        add_commit(client)
 
-def delete_client(id):
-    session = current_app.db.session
-    client = ClientModel.query.get(id)
+        client_json: dict = client.serialize
+        client_json["addresses"] = [
+            address.serialize for address in client.addresses
+        ]
 
-    session.delete(client)
-    session.commit()
+        return client_json
 
-    return "", HTTPStatus.NO_CONTENT
+    @staticmethod
+    def delete_client(id) -> None:
 
+        client: ClientModel = ClientModel.query.get(id)
 
-def check_valid_keys(data, valid_keys, key):
-    if key not in valid_keys:
-        raise InvalidKeysError(data, valid_keys)
+        if not client:
+            raise NotFoundError("Client not Found")
+
+        delete_commit(client)
+
+    @staticmethod
+    def create_address(id, data):
+        valid_keys = [
+            "zip_code",
+            "neighborhood",
+            "street",
+            "number",
+            "complement",
+            "client_id",
+        ]
+
+        if check_valid_keys(data, valid_keys):
+            raise InvalidKeysError(data, valid_keys)
+
+        address: AddressModel = AddressModel(**data)
+
+        add_commit(address)
+
+        return address.serialize
+
+    @staticmethod
+    def get_addresses(id):
+        addresses: list[AddressModel] = AddressModel.query.filter_by(client_id=id).all()
+        addresses_json: list[dict] = [address.serialize for address in addresses]
+
+        return addresses_json
+
+    @staticmethod
+    def updade_address_by_id(data, add_id):
+
+        valid_keys = [
+            "zip_code",
+            "neighborhood",
+            "street",
+            "number",
+            "complement",
+            "client_id",
+        ]
+
+        if check_valid_keys(data, valid_keys):
+            raise InvalidKeysError(data, valid_keys)
+
+        address: AddressModel = AddressModel.query.get(add_id)
+        if not address:
+            raise NotFoundError("Address not Found")
+
+        for key, value in data.items():
+            setattr(address, key, value)
+
+        add_commit(address)
+
+        return address.serialize
+
+    @staticmethod
+    def delete_address_by_id(add_id) -> None:
+        address: AddressModel = AddressModel.query.get(add_id)
+        if not address:
+            raise NotFoundError("Address not Found")
+
+        delete_commit(address)

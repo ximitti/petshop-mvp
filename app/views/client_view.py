@@ -1,208 +1,283 @@
-from typing import ValuesView
-from flask import Blueprint, jsonify, current_app, request
-from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required, get_jwt
 from http import HTTPStatus
 
-from app.models import ClientModel
-from app.models import AddressModel
+from app.services import ClientServices
+from app.services.helpers import is_admin, check_authorization
 
-from app.services.client_service import check_valid_keys
-
+from app.exc import InvalidKeysError, Unauthorized, NotFoundError, MissingKeysError
 from sqlalchemy.exc import IntegrityError
 
 
-bp  = Blueprint("bp_client", __name__, url_prefix="/api")
+bp = Blueprint("bp_client", __name__, url_prefix="/api")
 
 
 @bp.get("/clients")
-def get_clients():
+@jwt_required()
+def get_clients() -> tuple:
     try:
+        is_admin(get_jwt())
+        clients: list[dict] = ClientServices.get_clients()
 
-        clients = ClientModel.query.order_by(ClientModel.name).all()
-        clients = [client.serialize for client in clients]
+        return (
+            jsonify(data=clients),
+            HTTPStatus.OK,
+        )
 
-        return jsonify(clients)
+    except NotFoundError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
 
-    except:
-        return "", HTTPStatus.NOT_FOUND
+    except Unauthorized as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.UNAUTHORIZED,
+        )
 
 
 @bp.post("/clients/register")
-def create_client():
-    session = current_app.db.session
+def create_client() -> tuple:
     try:
-        data = request.get_json()
+        client: dict = ClientServices.create_client(request.get_json())
 
-        valid_keys = ["name", "email", "password", "phone", "address"]
-        for key, _ in data.items():
-            check_valid_keys(data, valid_keys, key)
+        return (
+            jsonify(data=client),
+            HTTPStatus.CREATED,
+        )
 
+    except InvalidKeysError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.BAD_REQUEST,
+        )
 
-        password_to_hash = data.pop("password")
-
-        client = ClientModel(**data)
-
-        client.password = password_to_hash
-
-        session.add(client)
-        session.commit()
-
-        return {"message":"user created"}, HTTPStatus.CREATED
-
-    except IntegrityError as _:
-        return {"error": "User already exists"}, HTTPStatus.NOT_ACCEPTABLE
+    except MissingKeysError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.BAD_REQUEST,
+        )
 
 
 @bp.post("/clients/login")
-def login():
-    data = request.get_json()
+def login() -> tuple:
     try:
-        client = ClientModel.query.filter_by(email=data["email"]).first()
+        token: str = ClientServices.get_token(request.get_json())
 
-        if client.check_password(data["password"]):
+        return (
+            jsonify(data={"access_token": token}),
+            HTTPStatus.OK,
+        )
 
-            access_token = create_access_token(identity=client.id)
+    except InvalidKeysError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.BAD_REQUEST,
+        )
 
-            return jsonify(access_token)
+    except MissingKeysError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.BAD_REQUEST,
+        )
 
-        return jsonify({"message": "Bad email or password"}), HTTPStatus.BAD_REQUEST
+    except NotFoundError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
 
-    except:
-        return jsonify({"message": "Bad email or password"}), HTTPStatus.BAD_REQUEST
 
-
-@bp.get("/clients/<int:id>")
+@bp.get("/clients/<int:client_id>")
 @jwt_required()
-def get_client_by_id(id):
-    current_user_id = get_jwt_identity()
-    if current_user_id == id:
-        try:
-            client = ClientModel.query.get(current_user_id)
+def get_client_by_id(client_id: int) -> tuple:
+    try:
+        if not check_authorization(client_id, get_jwt_identity()):
+            is_admin(get_jwt())
 
-            return jsonify(client.serialize)
-        except:
-            return {"message": "Not Found"}, HTTPStatus.NOT_FOUND
-    return {"message": "unauthorized"}, HTTPStatus.UNAUTHORIZED
+        client: dict = ClientServices.get_client_by_id(client_id)
+
+        return (
+            jsonify(data=client),
+            HTTPStatus.OK,
+        )
+
+    except NotFoundError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
+
+    except Unauthorized as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.UNAUTHORIZED,
+        )
 
 
-@bp.patch("/clients/<int:id>")
+@bp.patch("/clients/<int:client_id>")
 @jwt_required()
-def update_client_by_id(id):
-    session = current_app.db.session
-    current_user_id = get_jwt_identity()
-    data = request.get_json()
+def update_client_by_id(client_id: int) -> tuple:
+    try:
+        if not check_authorization(client_id, get_jwt_identity()):
+            is_admin(get_jwt())
 
-    if current_user_id == id:
-    
-        client = ClientModel.query.get(current_user_id)
-        valid_keys = ["name", "email", "password", "phone", "address"]
-        for key, value in data.items():
-            check_valid_keys(data, valid_keys, key)
-            if key == "password":
-                client.password = value
-            else:
-                setattr(client, key, value)
+        client: dict = ClientServices.update_client(request.get_json(), client_id)
 
-        session.add(client)
-        session.commit()
+        return jsonify(data=client)
 
-        return jsonify(client.serialize)
-    return {"message": "unauthorized"}, HTTPStatus.UNAUTHORIZED
+    except InvalidKeysError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.BAD_REQUEST,
+        )
+
+    except NotFoundError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
+
+    except Unauthorized as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.UNAUTHORIZED,
+        )
 
 
-@bp.delete("/clients/<int:id>")
+@bp.delete("/clients/<int:client_id>")
 @jwt_required()
-def delete_client_by_id(id):
-    current_user_id = get_jwt_identity()
-    session = current_app.db.session
+def delete_client_by_id(client_id: int) -> tuple:
+    try:
+        if not check_authorization(client_id, get_jwt_identity()):
 
-    if current_user_id == id:
-        try:
-            client = ClientModel.query.get(current_user_id)
+            is_admin(get_jwt())
 
-            session.delete(client)
-            session.commit()
+        ClientServices.delete_client(client_id)
 
-            return {"message":"deleted"}, HTTPStatus.NOT_FOUND
-        except:
-            return {"message":"Not Found"}, HTTPStatus.NOT_FOUND
+        return (
+            "",
+            HTTPStatus.NO_CONTENT,
+        )
 
-    return {"message": "unauthorized"}, HTTPStatus.UNAUTHORIZED
+    except NotFoundError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
+
+    except Unauthorized as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.UNAUTHORIZED,
+        )
 
 
-@bp.post("/clients/<int:id>/address")
+@bp.post("/clients/<int:client_id>/address")
 @jwt_required()
-def create_address(id):
-    session = current_app.db.session
-    data = request.get_json()
-    data["client_id"] = id
-    current_user_id = get_jwt_identity()
+def create_address(client_id: int) -> tuple:
+    try:
+        check_authorization(client_id, get_jwt_identity())
 
-    if current_user_id == id:
+        data = request.get_json()
+        data["client_id"] = client_id
 
-        valid_keys = ["zip_code", "neighborhood", "street", "number", "complement", "client_id"]
-        for key, _ in data.items():
-            check_valid_keys(data, valid_keys, key)
-        try:
-            address = AddressModel(**data)
-            session.add(address)
-            session.commit()
-            print(address.serialize)
-            return ("address.serialize"), HTTPStatus.CREATED
-        except IntegrityError as _:
-            return {"error": "already exists"}, HTTPStatus.NOT_ACCEPTABLE
-    return {"message": "unauthorized"}, HTTPStatus.UNAUTHORIZED
+        address: dict = ClientServices.create_address(client_id, data)
+
+        return (
+            jsonify(data=address),
+            HTTPStatus.CREATED,
+        )
+
+    except IntegrityError as _:
+        return (
+            jsonify(error="already exists"),
+            HTTPStatus.NOT_ACCEPTABLE,
+        )
+
+    except Unauthorized as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.UNAUTHORIZED,
+        )
 
 
-@bp.get("/clients/<int:id>/address")
+@bp.get("/clients/<int:client_id>/address")
 @jwt_required()
-def get_address(id):
-    current_user_id = get_jwt_identity()
-    
-    if current_user_id == id:
-        addresses = AddressModel.query.filter_by(client_id=id).all()
+def get_address(client_id: int) -> tuple:
+    try:
+        check_authorization(client_id, get_jwt_identity())
 
-        addresses = [address.serialize for address in addresses]
-    
+        addresses: list[dict] = ClientServices.get_addresses(client_id)
 
-        return jsonify(addresses), HTTPStatus.OK
-    return {"message": "unauthorized"}, HTTPStatus.UNAUTHORIZED
+        return (
+            jsonify(data=addresses),
+            HTTPStatus.OK,
+        )
 
-@bp.patch("/clients/<int:id>/address/<int:add_id>")
+    except Unauthorized as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.UNAUTHORIZED,
+        )
+
+
+@bp.patch("/clients/<int:client_id>/address/<int:add_id>")
 @jwt_required()
-def update_address(id, add_id):
-    session = current_app.db.session
-    current_user_id = get_jwt_identity()
-    data = request.get_json()
+def update_address(client_id: int, add_id: int) -> tuple:
+    try:
+        check_authorization(client_id, get_jwt_identity())
 
-    if current_user_id == id:
-        try:
-            address = AddressModel.query.get(add_id)
-            valid_keys = ["zip_code", "neighborhood", "street", "number", "complement", "client_id"]
+        data = request.get_json()
 
-            for key, value in data.items():
-                check_valid_keys(data, valid_keys, key)
-                setattr(address, key, value)
+        address: dict = ClientServices.updade_address_by_id(data, add_id)
 
-            session.add(address)
-            session.commit()
+        return (
+            jsonify(data=address),
+            HTTPStatus.OK,
+        )
 
-            return jsonify(address.serialize)
-        except IntegrityError as _:
-            return {"error": "zip_code already exists"}, HTTPStatus.NOT_ACCEPTABLE
+    except InvalidKeysError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.BAD_REQUEST,
+        )
 
-    return {"message": "unauthorized"}, HTTPStatus.UNAUTHORIZED
+    except NotFoundError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
 
-@bp.delete("/clients/<int:id>/address/<int:add_id>")
+    except Unauthorized as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.UNAUTHORIZED,
+        )
+
+
+@bp.delete("/clients/<int:client_id>/address/<int:add_id>")
 @jwt_required()
-def delete_edit_address(id, add_id):
-    session = current_app.db.session
-    current_user_id = get_jwt_identity()
+def delete_edit_address(client_id: int, add_id: int) -> tuple:
+    try:
+        check_authorization(client_id, get_jwt_identity())
 
-    if current_user_id == id:
-        address = AddressModel.query.get(add_id)
-        session.delete(address)
-        session.commit()
-        return {"message":"deleted"}, HTTPStatus.NOT_FOUND
+        ClientServices.delete_address_by_id(add_id)
 
-    return {"message": "unauthorized"}, HTTPStatus.UNAUTHORIZED
+        return (
+            "",
+            HTTPStatus.NO_CONTENT,
+        )
+
+    except NotFoundError as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.NOT_FOUND,
+        )
+
+    except Unauthorized as e:
+        return (
+            jsonify(e.message),
+            HTTPStatus.UNAUTHORIZED,
+        )

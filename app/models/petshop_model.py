@@ -1,16 +1,9 @@
 from . import db
 from sqlalchemy import Column, String, Integer, Boolean
 from werkzeug.security import generate_password_hash, check_password_hash
-from dataclasses import dataclass
 
 
-@dataclass
 class PetshopModel(db.Model):
-    id: int
-    name: str
-    email: str
-    is_admin: bool
-
     __tablename__ = "petshops"
 
     id = Column(Integer, primary_key=True)

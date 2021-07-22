@@ -1,29 +1,20 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify
 from http import HTTPStatus
 
-from app.models import OrderServicesModel
+from app.services import OrderServiceServices
 
 
 bp = Blueprint("bp_order_services", __name__, url_prefix="/api")
 
 
 @bp.post("/order_services")
-def register():
-    session = current_app.db.session
-
+def register() -> tuple:
     data = request.get_json()
 
     for service in data.get("services"):
-        print(service)
+        OrderServiceServices.create_order_service(data.get("order"), service)
 
-        order_service: OrderServicesModel = OrderServicesModel(
-            order_id=data.get("order"), services_id=service
-        )
-
-        session.add(order_service)
-        session.commit()
-
-    # order_service = OrderServicesModel(**data)
-
-    # return jsonify(data=order_service), HTTPStatus.CREATED
-    return "<h1>Order Service</h1>"
+    return (
+        jsonify(message="Order registered"),
+        HTTPStatus.CREATED,
+    )

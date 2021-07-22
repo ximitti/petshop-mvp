@@ -1,16 +1,13 @@
-from app.services.petshop_service import (
-    create_petshop,
-    get_token,
-    update_petshop,
-    delete_petshop,
-    get_petshop,
-    get_petshop_by_id,
-)
-from app.services.client_service import (
-    create_client,
-    get_clients,
-    get_token,
-    get_client_by_id,
-    update_client,
-    delete_client
-)
+from app.configs.database import db
+
+from .petshop_service import PetShopServices
+
+from .client_service import ClientServices
+
+from .pet_service import PetServices
+
+from .order_service import OrderServices
+
+from .services_service import ServiceServices
+
+from .order_service_service import OrderServiceServices
