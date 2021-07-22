@@ -1,6 +1,6 @@
 # :mortar_board: Kenzie
 
-<p align="center">Somo um grupo de estudandes da <a href="https://kenzie.com.br/">Kenzie Academy Brasil</a>, este é o nosso projeto para a finalização do terceiro trimestre de estudos, onde foram abordados os conhecimentos de desenvolvimento back-end, assim como, boas práticas e metodologias ágeis.
+<p align="center">Somos um grupo de estudandes da <a href="https://kenzie.com.br/">Kenzie Academy Brasil</a>, este é o nosso projeto para a finalização do terceiro trimestre de estudos, onde foram abordados os conhecimentos de desenvolvimento back-end, assim como, boas práticas e metodologias ágeis.
 
 <p align="center">Nesse projeto nós nos desafiamos colocando em prática conceito importantes como: Python, HTTP, Criação de rotas, Programação Orientada a Objetos, Banco de dados, PostgreSQL, Flask Factory Pattern, Tratamento de exceções, ORM, Migração, Hashing, Deploy, Autenticação e Muito mais...
 
