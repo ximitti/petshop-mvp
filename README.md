@@ -13,18 +13,23 @@ Estamos muito orgulhosos de termos tido essa oportunidade, foi um imenso aprendi
     <ul>
         <li>
             <a href="https://github.com/ximitti">Alex Schmitt - <span color="#4BFFFF">Tech Leader</span></a><span><a href="https://www.linkedin.com/in/ximitti/"> Linkedin</a></span>
+            <br>
         </li>
         <li>
             <a href="https://github.com/diegosilva998">Diego Silva - <span color="#4BFFFF">Product Owner</span></a><span><a href="https://www.linkedin.com/in/diego-silva-dev/"> Linkedin</a></span>
+            <br>
         </li>
         <li>
              <a href="https://github.com/7Cass">João Pedro Arruda - <span color="#4BFFFF">Scrum Master</span></a><span><a href="https://www.linkedin.com/in/jparruda/"> Linkedin</a></span>
+             <br>
         </li>
         <li>
-            <a href="https://github.com/Leonardoperrella">Leonardo Perrella - <span color="#4BFFFF">Developer</span></a><span><a href="https://www.linkedin.com/in/leonardo-augusto-perrella/"> Linkedin</a></span> 
+            <a href="https://github.com/Leonardoperrella">Leonardo Perrella - <span color="#4BFFFF">Developer</span></a><span><a href="https://www.linkedin.com/in/leonardo-augusto-perrella/"> Linkedin</a></span>
+            <br>
         </li>
         <li>
             <a href="https://github.com/ankle-code">Lucas Passeli - <span color="#4BFFFF">Developer</span></a><span><a href="https://www.linkedin.com/in/lucas-passeli/"> Linkedin</a></span>
+            <br>
         </li>
     </ul>
   </sub>
